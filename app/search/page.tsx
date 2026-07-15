@@ -2,11 +2,17 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Search } from "lucide-react";
+import {
+  ArrowLeft,
+  Search,
+  X,
+  FileSearch,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+
 import { useEntryStore } from "@/store/entryStore";
 import EntryCard from "@/components/dashboard/EntryCard";
 
@@ -22,13 +28,23 @@ export default function SearchPage() {
   const results = normalizedQuery
     ? entries.filter((entry) => {
         const entryMatches =
-          entry.entryName.toLowerCase().includes(normalizedQuery) ||
-          entry.subject.toLowerCase().includes(normalizedQuery) ||
-          entry.lesson.toLowerCase().includes(normalizedQuery) ||
-          entry.notes.toLowerCase().includes(normalizedQuery);
+          entry.entryName
+            .toLowerCase()
+            .includes(normalizedQuery) ||
+          entry.subject
+            .toLowerCase()
+            .includes(normalizedQuery) ||
+          entry.lesson
+            .toLowerCase()
+            .includes(normalizedQuery) ||
+          entry.notes
+            .toLowerCase()
+            .includes(normalizedQuery);
 
         const workMatches = entry.works.some((work) =>
-          work.task.toLowerCase().includes(normalizedQuery)
+          work.task
+            .toLowerCase()
+            .includes(normalizedQuery)
         );
 
         return entryMatches || workMatches;
@@ -36,63 +52,109 @@ export default function SearchPage() {
     : [];
 
   return (
-    <main className="min-h-screen bg-[#0B1120] px-5 py-8 text-white">
-      <div className="mx-auto max-w-4xl">
+    <main className="min-h-screen bg-background px-5 pb-8 pt-7 text-foreground">
+      <div className="mx-auto w-full max-w-4xl">
+        {/* Header */}
 
-        <div className="flex items-center gap-4">
+        <header className="flex items-start gap-4">
           <Button
             variant="outline"
             size="icon"
+            className="shrink-0 rounded-xl"
             onClick={() => router.push("/")}
+            aria-label="Back to Dashboard"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
 
-          <div>
-            <h1 className="text-3xl font-bold">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
               Search
             </h1>
 
-            <p className="text-sm text-slate-400">
-              Find anything from your academic timeline
+            <p className="mt-1 text-sm text-muted-foreground">
+              Find anything you've captured in Lectra.
             </p>
           </div>
-        </div>
+        </header>
 
-        <div className="relative mt-8">
-          <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
+        {/* Search Input */}
 
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search subject, lesson, notes or tasks..."
-            className="h-14 rounded-2xl border-slate-700 bg-[#111827] pl-12"
-          />
-        </div>
+        <section className="mt-8">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
 
-        {normalizedQuery && (
-          <p className="mt-5 text-sm text-slate-400">
-            {results.length}{" "}
-            {results.length === 1 ? "entry" : "entries"} found
-          </p>
-        )}
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search entries, categories, notes or tasks..."
+              className="h-14 rounded-2xl border-border bg-card pl-12 pr-12 text-foreground"
+            />
+
+            {query.length > 0 && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg text-muted-foreground hover:text-foreground"
+                onClick={() => setQuery("")}
+                aria-label="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+
+          {normalizedQuery && (
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <p className="text-sm text-muted-foreground">
+                Results for{" "}
+                <span className="font-medium text-foreground">
+                  "{query.trim()}"
+                </span>
+              </p>
+
+              <span className="flex h-8 min-w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 px-2.5 text-xs font-semibold text-primary">
+                {results.length}
+              </span>
+            </div>
+          )}
+        </section>
+
+        {/* Search Results */}
 
         <section className="mt-5">
           {!normalizedQuery ? (
-            <Card className="rounded-3xl border-slate-700 bg-[#111827]">
-              <CardContent className="py-12 text-center">
-                <Search className="mx-auto mb-4 h-12 w-12 text-slate-500" />
+            <Card className="rounded-3xl border-border bg-card">
+              <CardContent className="flex flex-col items-center px-6 py-12 text-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
+                  <Search className="h-8 w-8 text-primary" />
+                </div>
 
-                <p className="text-slate-400">
-                  Search your Lectra memory.
+                <h2 className="mt-5 text-lg font-semibold text-foreground">
+                  Search your Lectra memory
+                </h2>
+
+                <p className="mt-2 max-w-xs text-sm leading-6 text-muted-foreground">
+                  Find entries using names, categories, key notes,
+                  additional notes or tasks.
                 </p>
               </CardContent>
             </Card>
           ) : results.length === 0 ? (
-            <Card className="rounded-3xl border-slate-700 bg-[#111827]">
-              <CardContent className="py-12 text-center">
-                <p className="text-slate-400">
-                  No matching entries found.
+            <Card className="rounded-3xl border-border bg-card">
+              <CardContent className="flex flex-col items-center px-6 py-12 text-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary">
+                  <FileSearch className="h-8 w-8 text-muted-foreground" />
+                </div>
+
+                <h2 className="mt-5 text-lg font-semibold text-foreground">
+                  No matching entries
+                </h2>
+
+                <p className="mt-2 max-w-xs text-sm leading-6 text-muted-foreground">
+                  Nothing matched "{query.trim()}". Try a different
+                  word or phrase.
                 </p>
               </CardContent>
             </Card>
@@ -107,7 +169,6 @@ export default function SearchPage() {
             </div>
           )}
         </section>
-
       </div>
     </main>
   );

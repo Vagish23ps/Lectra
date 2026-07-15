@@ -1,7 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  FileText,
+  Tag,
+  ListTodo,
+  StickyNote,
+  CalendarDays,
+} from "lucide-react";
 
 import {
   Dialog,
@@ -18,6 +26,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Entry, WorkItem } from "@/types/entry";
 import { useEntryStore } from "@/store/entryStore";
 
+const createEmptyWork = (): WorkItem => ({
+  id: crypto.randomUUID(),
+  task: "",
+  addToPending: false,
+  deadline: "",
+  completed: false,
+});
+
 export default function AddEntryDialog() {
   const addEntry = useEntryStore((state) => state.addEntry);
 
@@ -29,29 +45,20 @@ export default function AddEntryDialog() {
   const [notes, setNotes] = useState("");
 
   const [works, setWorks] = useState<WorkItem[]>([
-    {
-      id: crypto.randomUUID(),
-      task: "",
-      addToPending: false,
-      deadline: "",
-      completed: false,
-    },
+    createEmptyWork(),
   ]);
-    const addWork = () => {
+
+  const addWork = () => {
     setWorks((prev) => [
       ...prev,
-      {
-        id: crypto.randomUUID(),
-        task: "",
-        addToPending: false,
-        deadline: "",
-        completed: false,
-      },
+      createEmptyWork(),
     ]);
   };
 
   const removeWork = (id: string) => {
-    setWorks((prev) => prev.filter((work) => work.id !== id));
+    setWorks((prev) =>
+      prev.filter((work) => work.id !== id)
+    );
   };
 
   const updateWork = (
@@ -70,186 +77,267 @@ export default function AddEntryDialog() {
       )
     );
   };
-  const handleSave = () => {
-  if (!entryName.trim() || !subject.trim()) {
-    alert("Entry Name and Subject are required.");
-    return;
-  }
 
-  const entry: Entry = {
-    id: crypto.randomUUID(),
-    entryName,
-    subject,
-    lesson,
-    notes,
-    createdAt: new Date().toISOString(),
-    works,
+  const resetForm = () => {
+    setEntryName("");
+    setSubject("");
+    setLesson("");
+    setNotes("");
+
+    setWorks([
+      createEmptyWork(),
+    ]);
   };
 
-  addEntry(entry);
+  const handleSave = () => {
+    if (!entryName.trim() || !subject.trim()) {
+      alert("Entry Name and Subject / Category are required.");
+      return;
+    }
 
-  // Reset form
-  setEntryName("");
-  setSubject("");
-  setLesson("");
-  setNotes("");
-
-  setWorks([
-    {
+    const entry: Entry = {
       id: crypto.randomUUID(),
-      task: "",
-      addToPending: false,
-      deadline: "",
-      completed: false,
-    },
-  ]);
+      entryName: entryName.trim(),
+      subject: subject.trim(),
+      lesson: lesson.trim(),
+      notes: notes.trim(),
+      createdAt: new Date().toISOString(),
+      works,
+    };
 
-  setOpen(false);
-};
-    return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    addEntry(entry);
+
+    resetForm();
+
+    setOpen(false);
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={setOpen}
+    >
       <DialogTrigger asChild>
-        <Button className="w-full h-14 rounded-2xl bg-blue-600">
+        <Button className="h-14 w-full rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 transition hover:bg-primary/90">
           <Plus className="mr-2 h-5 w-5" />
           Add Entry
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Add New Entry</DialogTitle>
+      <DialogContent className="max-h-[90vh] overflow-y-auto border-border bg-popover p-0 sm:max-w-lg">
+        {/* Header */}
+
+        <DialogHeader className="border-b border-border px-5 pb-4 pt-5">
+          <DialogTitle className="text-xl font-semibold tracking-tight text-foreground">
+            Add New Entry
+          </DialogTitle>
+
+          <p className="text-sm text-muted-foreground">
+            Capture notes, ideas and tasks in one place.
+          </p>
         </DialogHeader>
 
-        <div className="space-y-5"></div>
-        <Input
-  placeholder="Entry Name (Example: Second Hour)"
-  value={entryName}
-  onChange={(e) => setEntryName(e.target.value)}
-/>
+        {/* Form */}
 
-<Input
-  placeholder="Subject"
-  value={subject}
-  onChange={(e) => setSubject(e.target.value)}
-/>
+        <div className="space-y-6 px-5 pb-5">
+          {/* Entry Details */}
 
-<Textarea
-  placeholder="Today's Lesson / Concept"
-  value={lesson}
-  onChange={(e) => setLesson(e.target.value)}
-/>
+          <section className="space-y-4">
+            <div>
+              <label className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                Entry Name
+              </label>
 
-<div>
+              <Input
+                placeholder="Example: Math Class, Project Meeting, Personal Notes"
+                value={entryName}
+                onChange={(e) => setEntryName(e.target.value)}
+                className="h-12 rounded-xl bg-background"
+              />
+            </div>
 
-  <div className="flex items-center justify-between mb-3">
+            <div>
+              <label className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
+                <Tag className="h-4 w-4 text-muted-foreground" />
+                Subject / Category
+              </label>
 
-    <h3 className="font-semibold">
-      Assigned Work
-    </h3>
+              <Input
+                placeholder="Example: Project, College, Personal"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                className="h-12 rounded-xl bg-background"
+              />
+            </div>
 
-    <Button
-      type="button"
-      size="sm"
-      variant="outline"
-      onClick={addWork}
-    >
-      <Plus className="mr-2 h-4 w-4" />
-      Add
-    </Button>
+            <div>
+              <label className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
+                <StickyNote className="h-4 w-4 text-muted-foreground" />
+                Key Notes
+              </label>
 
-  </div>
+              <Textarea
+                placeholder="Important points for this entry..."
+                value={lesson}
+                onChange={(e) => setLesson(e.target.value)}
+                className="min-h-28 resize-none rounded-xl bg-background"
+              />
+            </div>
+          </section>
 
-  {works.map((work, index) => (
+          {/* Tasks */}
 
-    <div
-      key={work.id}
-      className="rounded-xl border p-4 mb-4 space-y-3"
-    >
+          <section className="border-t border-border pt-5">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="flex items-center gap-2 font-semibold text-foreground">
+                  <ListTodo className="h-4 w-4 text-primary" />
+                  Tasks
+                </h3>
 
-      <p className="font-medium">
-        Assignment {index + 1}
-      </p>
-
-      <Input
-        placeholder="Task Description"
-        value={work.task}
-        onChange={(e) =>
-          updateWork(work.id, "task", e.target.value)
-        }
-      />
-
-      <label className="flex items-center gap-2 text-sm">
-
-        <input
-          type="checkbox"
-          checked={work.addToPending}
-          onChange={(e) =>
-            updateWork(
-              work.id,
-              "addToPending",
-              e.target.checked
-            )
-          }
-        />
-
-        Add to Pending List
-
-      </label>
-            {work.addToPending && (
-
-              <div className="space-y-2">
-
-                <label className="text-sm font-medium text-slate-600">
-                  Deadline
-                  <span className="text-slate-400 font-normal">
-                    {" "} (Optional)
-                  </span>
-                </label>
-
-                <Input
-                  type="date"
-                  value={work.deadline}
-                  onChange={(e) =>
-                    updateWork(
-                      work.id,
-                      "deadline",
-                      e.target.value
-                    )
-                  }
-                />
-
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Add actions related to this entry.
+                </p>
               </div>
 
-            )}
-    </div>
-  ))}
-</div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="rounded-xl"
+                onClick={addWork}
+              >
+                <Plus className="mr-1.5 h-4 w-4" />
+                Add
+              </Button>
+            </div>
 
-<Textarea
-  placeholder="Important Notes"
-  value={notes}
-  onChange={(e) => setNotes(e.target.value)}
-/>
-<div className="flex gap-3 pt-2">
+            <div className="space-y-3">
+              {works.map((work, index) => (
+                <div
+                  key={work.id}
+                  className="rounded-2xl border border-border bg-background/60 p-4"
+                >
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium text-foreground">
+                      Task {index + 1}
+                    </p>
 
-  <Button
-    type="button"
-    variant="outline"
-    className="flex-1"
-    onClick={() => setOpen(false)}
-  >
-    Cancel
-  </Button>
+                    {works.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => removeWork(work.id)}
+                        aria-label={`Remove task ${index + 1}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
 
-  <Button
-    type="button"
-    className="flex-1 bg-blue-600 hover:bg-blue-700"
-    onClick={handleSave}
-  >
-    Save Entry
-  </Button>
+                  <Input
+                    placeholder="What needs to be done?"
+                    value={work.task}
+                    onChange={(e) =>
+                      updateWork(
+                        work.id,
+                        "task",
+                        e.target.value
+                      )
+                    }
+                    className="h-11 rounded-xl bg-card"
+                  />
 
-</div>
+                  <label className="mt-4 flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-card px-3 py-3 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={work.addToPending}
+                      onChange={(e) =>
+                        updateWork(
+                          work.id,
+                          "addToPending",
+                          e.target.checked
+                        )
+                      }
+                      className="h-4 w-4 accent-primary"
+                    />
+
+                    <span className="text-foreground">
+                      Add to Pending List
+                    </span>
+                  </label>
+
+                  {work.addToPending && (
+                    <div className="mt-4 space-y-2">
+                      <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                        <CalendarDays className="h-4 w-4 text-muted-foreground" />
+
+                        Deadline
+
+                        <span className="font-normal text-muted-foreground">
+                          (Optional)
+                        </span>
+                      </label>
+
+                      <Input
+                        type="date"
+                        value={work.deadline}
+                        onChange={(e) =>
+                          updateWork(
+                            work.id,
+                            "deadline",
+                            e.target.value
+                          )
+                        }
+                        className="h-11 rounded-xl bg-card"
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Additional Notes */}
+
+          <section className="border-t border-border pt-5">
+            <label className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
+              <StickyNote className="h-4 w-4 text-muted-foreground" />
+              Additional Notes
+            </label>
+
+            <Textarea
+              placeholder="Anything else worth remembering?"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="min-h-24 resize-none rounded-xl bg-background"
+            />
+          </section>
+
+          {/* Actions */}
+
+          <div className="grid grid-cols-2 gap-3 border-t border-border pt-5">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-12 rounded-xl"
+              onClick={() => setOpen(false)}
+            >
+              Cancel
+            </Button>
+
+            <Button
+              type="button"
+              className="h-12 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
+              onClick={handleSave}
+            >
+              Save Entry
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

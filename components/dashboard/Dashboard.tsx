@@ -1,17 +1,26 @@
 "use client";
 
-import { CalendarDays, Plus, ClipboardList, CalendarRange, Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
+import {
+  CalendarDays,
+  ClipboardList,
+  ChevronRight,
+  ListTodo,
+} from "lucide-react";
+
+import { Card, CardContent } from "@/components/ui/card";
 import AddEntryDialog from "@/components/dialogs/AddEntryDialog";
 import { useEntryStore } from "@/store/entryStore";
 import EntryCard from "./EntryCard";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
 
 export default function Dashboard() {
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
+
+  const router = useRouter();
+
+  const entries = useEntryStore((state) => state.entries);
 
   useEffect(() => {
     setCurrentDate(new Date());
@@ -31,152 +40,164 @@ export default function Dashboard() {
       : hour < 17
       ? "Good Afternoon 🌤️"
       : "Good Evening 🌙";
-    const router = useRouter();
 
-    const entries = useEntryStore((state) => state.entries);
-    const todayEntries = currentDate
-      ? entries.filter(
-          (entry) =>
-            format(new Date(entry.createdAt), "yyyy-MM-dd") ===
-            format(currentDate, "yyyy-MM-dd")
-        )
-      : [];
-
-    const pendingCount = entries.flatMap((entry) =>
-      entry.works.filter(
-        (work) => work.addToPending && !work.completed
+  const todayEntries = currentDate
+    ? entries.filter(
+        (entry) =>
+          format(new Date(entry.createdAt), "yyyy-MM-dd") ===
+          format(currentDate, "yyyy-MM-dd")
       )
-    ).length;
+    : [];
+
+  const pendingCount = entries.flatMap((entry) =>
+    entry.works.filter(
+      (work) => work.addToPending && !work.completed
+    )
+  ).length;
+
   return (
-    <main className="min-h-screen bg-[#0B1120] text-white px-5 py-8">
-      {/* Logo */}
+    <main className="min-h-screen bg-background px-5 pb-8 pt-7 text-foreground">
+      <div className="mx-auto w-full max-w-4xl">
+        {/* Brand */}
 
-      <div className="flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 text-xl font-bold">
-          L
-        </div>
+        <header className="flex items-center gap-3">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-xl font-bold text-primary-foreground shadow-lg shadow-primary/20">
+            L
+          </div>
 
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Lectra</h1>
-          <p className="text-sm text-slate-400">
-            Capture Today. Recall Anytime.
-          </p>
-        </div>
-      </div>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              Lectra
+            </h1>
 
-      {/* Greeting */}
+            <p className="truncate text-sm text-muted-foreground">
+              Capture Today. Recall Anytime.
+            </p>
+          </div>
+        </header>
 
-      <div className="mt-10">
-        <h2 className="text-2xl font-semibold">{greeting}</h2>
+        {/* Greeting */}
 
-        <div className="mt-2 flex items-center gap-2 text-slate-400">
-          <CalendarDays size={18} />
-          <span>{today}</span>
-        </div>
-      </div>
+        <section className="mt-9">
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+            {greeting || "Welcome"}
+          </h2>
 
-      {/* Quick Actions */}
+          <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+            <CalendarDays className="h-4 w-4" />
 
-      <div className="mt-8 space-y-3">
-        <AddEntryDialog />
+            <span>{today || "Loading date..."}</span>
+          </div>
+        </section>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Button
-            variant="outline"
-            className="h-14 rounded-2xl border-slate-700 bg-[#111827]"
-            onClick={() => router.push("/calendar")}
-          >
-            <CalendarRange className="mr-2 h-5 w-5" />
-            Calendar
-          </Button>
+        {/* Add Entry */}
 
-          <Button
-            variant="outline"
-            className="h-14 rounded-2xl border-slate-700 bg-[#111827]"
-            onClick={() => router.push("/search")}
-          >
-            <Search className="mr-2 h-5 w-5" />
-            Search
-          </Button>
-        </div>
-      </div>
-      {/* Today's Entries */}
+        <section className="mt-7">
+          <AddEntryDialog />
+        </section>
 
-      <section className="mt-10">
+        {/* Today's Entries */}
 
-  <h3 className="text-xl font-semibold">
-    Today's Entries
-  </h3>
-
-  {todayEntries.length === 0 ? (
-
-    <Card className="mt-5 rounded-3xl border-slate-700 bg-[#111827]">
-
-      <CardContent className="flex flex-col items-center py-12 text-center">
-
-        <ClipboardList
-          size={55}
-          className="mb-5 text-slate-500"
-        />
-
-        <h4 className="text-xl font-semibold">
-          Your academic timeline starts here
-        </h4>
-
-        <p className="mt-3 text-slate-400">
-          Nothing recorded today.
-        </p>
-
-      </CardContent>
-
-    </Card>
-
-  ) : (
-
-    <div className="space-y-4 mt-5">
-
-      {todayEntries.map((entry) => (
-
-      <EntryCard
-        key={entry.id}
-        entry={entry}
-      />
-
-      ))}
-
-    </div>
-
-  )}
-
-</section>
-      {/* Pending Work */}
-
-      <section className="mt-8">
-        <Card
-          onClick={() => router.push("/pending")}
-          className="cursor-pointer rounded-3xl border-slate-700 bg-[#111827]"
-        >
-          <CardContent className="flex items-center justify-between py-6">
+        <section className="mt-10">
+          <div className="flex items-center justify-between gap-4">
             <div>
-              <h4 className="font-semibold">
-                Pending Work
-              </h4>
+              <h3 className="text-xl font-semibold tracking-tight text-foreground">
+                Today's Entries
+              </h3>
 
-              <p className="text-sm text-slate-400">
-                {pendingCount === 0
-                  ? "No pending tasks 🎉"
-                  : `${pendingCount} ${
-                      pendingCount === 1 ? "task" : "tasks"
-                    } waiting for you`}
-              </p>
+              {todayEntries.length > 0 && (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {todayEntries.length}{" "}
+                  {todayEntries.length === 1 ? "entry" : "entries"} captured
+                  today
+                </p>
+              )}
             </div>
 
-            <div className="rounded-full bg-green-600 px-4 py-2 text-sm font-semibold">
-              {pendingCount}
+            {todayEntries.length > 0 && (
+              <span className="flex h-8 min-w-8 items-center justify-center rounded-full bg-primary/10 px-2.5 text-xs font-semibold text-primary">
+                {todayEntries.length}
+              </span>
+            )}
+          </div>
+
+          {todayEntries.length === 0 ? (
+            <Card className="mt-5 rounded-3xl border-border bg-card">
+              <CardContent className="flex flex-col items-center px-6 py-12 text-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary">
+                  <ClipboardList className="h-8 w-8 text-muted-foreground" />
+                </div>
+
+                <h4 className="mt-5 text-lg font-semibold text-foreground">
+                  Nothing captured yet
+                </h4>
+
+                <p className="mt-2 max-w-xs text-sm leading-6 text-muted-foreground">
+                  Add your first entry and start building your daily timeline.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="mt-5 space-y-4">
+              {todayEntries.map((entry) => (
+                <EntryCard
+                  key={entry.id}
+                  entry={entry}
+                />
+              ))}
             </div>
-          </CardContent>
-        </Card>
-      </section>
+          )}
+        </section>
+
+        {/* Pending Work */}
+
+        <section className="mt-8">
+          <Card
+            onClick={() => router.push("/pending")}
+            className="cursor-pointer rounded-3xl border-border bg-card transition-colors hover:border-primary/50"
+          >
+            <CardContent className="flex items-center gap-4 p-5">
+              <div
+                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${
+                  pendingCount > 0
+                    ? "bg-amber-500/10 text-amber-400"
+                    : "bg-green-500/10 text-green-400"
+                }`}
+              >
+                <ListTodo className="h-5 w-5" />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <h4 className="font-semibold text-foreground">
+                  Pending Work
+                </h4>
+
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {pendingCount === 0
+                    ? "You're all caught up 🎉"
+                    : `${pendingCount} ${
+                        pendingCount === 1 ? "task" : "tasks"
+                      } waiting for you`}
+                </p>
+              </div>
+
+              <div className="flex shrink-0 items-center gap-2">
+                <span
+                  className={`flex h-9 min-w-9 items-center justify-center rounded-full px-2 text-sm font-semibold ${
+                    pendingCount > 0
+                      ? "bg-amber-500/10 text-amber-400"
+                      : "bg-green-500/10 text-green-400"
+                  }`}
+                >
+                  {pendingCount}
+                </span>
+
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+      </div>
     </main>
   );
 }

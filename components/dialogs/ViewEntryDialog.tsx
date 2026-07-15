@@ -1,6 +1,17 @@
 "use client";
 
 import {
+  CalendarDays,
+  CheckCircle2,
+  Circle,
+  Clock3,
+  FileText,
+  ListTodo,
+  StickyNote,
+  Tag,
+} from "lucide-react";
+
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -23,165 +34,246 @@ export default function ViewEntryDialog({
 }: ViewEntryDialogProps) {
   const updateEntry = useEntryStore((state) => state.updateEntry);
 
-    const toggleWorkCompleted = (workId: string) => {
-      if (!entry) return;
+  const toggleWorkCompleted = (workId: string) => {
+    if (!entry) return;
 
-      const updatedEntry: Entry = {
-        ...entry,
-        works: entry.works.map((work) =>
-          work.id === workId
-            ? { ...work, completed: !work.completed }
-            : work
-        ),
-      };
-
-      updateEntry(updatedEntry);
+    const updatedEntry: Entry = {
+      ...entry,
+      works: entry.works.map((work) =>
+        work.id === workId
+          ? {
+              ...work,
+              completed: !work.completed,
+            }
+          : work
+      ),
     };
 
+    updateEntry(updatedEntry);
+  };
+
   if (!entry) return null;
+
+  const validWorks = entry.works.filter(
+    (work) => work.task.trim() !== ""
+  );
+
+  const completedCount = validWorks.filter(
+    (work) => work.completed
+  ).length;
+
+  const pendingCount = validWorks.filter(
+    (work) => work.addToPending && !work.completed
+  ).length;
 
   return (
     <Dialog
       open={open}
       onOpenChange={onOpenChange}
     >
+      <DialogContent className="max-h-[90vh] overflow-y-auto border-border bg-popover p-0 sm:max-w-lg">
+        {/* Header */}
 
-      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-3xl">
-
-        <DialogHeader>
-
-          <DialogTitle className="text-2xl">
-
-            📖 {entry.entryName}
-
-          </DialogTitle>
-
-        </DialogHeader>
-        <div className="space-y-6">
-
-          <div>
-
-            <p className="text-sm text-slate-400">
-
-              Subject
-
-            </p>
-
-            <p className="text-lg font-semibold text-blue-500">
-
-              {entry.subject}
-
-            </p>
-
-          </div>
-
-          <div>
-
-            <h3 className="font-semibold">
-
-              📚 Today's Lesson
-
-            </h3>
-
-            <p className="mt-2 text-slate-300">
-
-              {entry.lesson}
-
-            </p>
-
-          </div>
-                  <div>
-
-            <h3 className="font-semibold mb-3">
-
-              📝 Assigned Work
-
-            </h3>
-
-            <div className="space-y-3">
-
-              {entry.works.map((work) => (
-
-                <div
-                  key={work.id}
-                  className="rounded-xl border border-slate-700 p-4"
-                >
-
-                  <button
-                    type="button"
-                    onClick={() => toggleWorkCompleted(work.id)}
-                    className="flex items-center gap-2 text-left"
-                  >
-                    <span>
-                      {work.completed ? "✅" : "⬜"}
-                    </span>
-
-                    <span
-                      className={
-                        work.completed
-                          ? "text-slate-500 line-through"
-                          : ""
-                      }
-                    >
-                      {work.task}
-                    </span>
-                  </button>
-
-                  {work.addToPending && (
-
-                    <p className="text-sm text-orange-400 mt-2">
-
-                      Deadline: {work.deadline || "Not Set"}
-
-                    </p>
-
-                  )}
-
-                </div>
-
-              ))}
-
+        <DialogHeader className="border-b border-border px-5 pb-5 pt-5">
+          <div className="flex items-start gap-3 pr-10">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <FileText className="h-5 w-5" />
             </div>
 
+            <div className="min-w-0 flex-1">
+              <DialogTitle className="text-xl font-semibold leading-7 tracking-tight text-foreground">
+                {entry.entryName}
+              </DialogTitle>
+
+              <div className="mt-2 flex items-center gap-1.5 text-sm font-medium text-primary">
+                <Tag className="h-3.5 w-3.5" />
+
+                <span className="break-words">
+                  {entry.subject}
+                </span>
+              </div>
+            </div>
           </div>
-                  <div>
+        </DialogHeader>
 
-            <h3 className="font-semibold">
+        {/* Entry Content */}
 
-              🗒 Personal Notes
+        <div className="space-y-6 px-5 pb-5">
+          {/* Key Notes */}
 
-            </h3>
+          <section>
+            <div className="mb-3 flex items-center gap-2">
+              <StickyNote className="h-4 w-4 text-primary" />
 
-            <p className="mt-2 text-slate-300">
+              <h3 className="font-semibold text-foreground">
+                Key Notes
+              </h3>
+            </div>
 
-              {entry.notes || "No notes added."}
+            <div className="rounded-2xl border border-border bg-background/60 p-4">
+              {entry.lesson.trim() ? (
+                <p className="whitespace-pre-wrap text-sm leading-6 text-foreground/90">
+                  {entry.lesson}
+                </p>
+              ) : (
+                <p className="text-sm italic text-muted-foreground">
+                  No key notes added.
+                </p>
+              )}
+            </div>
+          </section>
 
-            </p>
+          {/* Tasks */}
 
-          </div>
+          <section className="border-t border-border pt-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <ListTodo className="h-4 w-4 text-primary" />
 
-          <div>
+                  <h3 className="font-semibold text-foreground">
+                    Tasks
+                  </h3>
+                </div>
 
-            <h3 className="font-semibold">
+                {validWorks.length > 0 && (
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    Tap a task to mark it as completed.
+                  </p>
+                )}
+              </div>
 
-              🕒 Created
+              {validWorks.length > 0 && (
+                <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground">
+                  {completedCount}/{validWorks.length}
+                </span>
+              )}
+            </div>
 
-            </h3>
+            {validWorks.length === 0 ? (
+              <div className="mt-4 rounded-2xl border border-dashed border-border px-4 py-6 text-center">
+                <ListTodo className="mx-auto h-6 w-6 text-muted-foreground" />
 
-            <p className="mt-2 text-slate-400">
+                <p className="mt-2 text-sm text-muted-foreground">
+                  No tasks added to this entry.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-4 space-y-3">
+                {validWorks.map((work) => (
+                  <div
+                    key={work.id}
+                    className={`rounded-2xl border p-4 transition-colors ${
+                      work.completed
+                        ? "border-green-500/20 bg-green-500/5"
+                        : "border-border bg-background/60"
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() =>
+                        toggleWorkCompleted(work.id)
+                      }
+                      className="flex w-full items-start gap-3 text-left"
+                    >
+                      {work.completed ? (
+                        <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-400" />
+                      ) : (
+                        <Circle className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
+                      )}
 
-              {new Date(entry.createdAt).toLocaleString()}
+                      <span
+                        className={`min-w-0 flex-1 text-sm leading-6 ${
+                          work.completed
+                            ? "text-muted-foreground line-through"
+                            : "text-foreground"
+                        }`}
+                      >
+                        {work.task}
+                      </span>
+                    </button>
 
-            </p>
+                    {work.addToPending && (
+                      <div className="mt-3 flex items-center gap-2 border-t border-border/70 pt-3 text-xs">
+                        <Clock3
+                          className={`h-3.5 w-3.5 ${
+                            work.completed
+                              ? "text-green-400"
+                              : "text-amber-400"
+                          }`}
+                        />
 
-          </div>
+                        <span
+                          className={
+                            work.completed
+                              ? "text-green-400"
+                              : "text-amber-400"
+                          }
+                        >
+                          {work.completed
+                            ? "Completed"
+                            : `Deadline: ${
+                                work.deadline || "Not set"
+                              }`}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
 
+            {pendingCount > 0 && (
+              <p className="mt-3 text-xs text-amber-400">
+                {pendingCount}{" "}
+                {pendingCount === 1 ? "task is" : "tasks are"} still pending.
+              </p>
+            )}
+          </section>
+
+          {/* Additional Notes */}
+
+          <section className="border-t border-border pt-5">
+            <div className="mb-3 flex items-center gap-2">
+              <StickyNote className="h-4 w-4 text-primary" />
+
+              <h3 className="font-semibold text-foreground">
+                Additional Notes
+              </h3>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-background/60 p-4">
+              {entry.notes.trim() ? (
+                <p className="whitespace-pre-wrap text-sm leading-6 text-foreground/90">
+                  {entry.notes}
+                </p>
+              ) : (
+                <p className="text-sm italic text-muted-foreground">
+                  No additional notes added.
+                </p>
+              )}
+            </div>
+          </section>
+
+          {/* Created Date */}
+
+          <section className="border-t border-border pt-5">
+            <div className="flex items-center gap-3 rounded-2xl bg-secondary/60 px-4 py-3">
+              <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" />
+
+              <div>
+                <p className="text-xs text-muted-foreground">
+                  Created
+                </p>
+
+                <p className="mt-0.5 text-sm font-medium text-foreground">
+                  {new Date(entry.createdAt).toLocaleString()}
+                </p>
+              </div>
+            </div>
+          </section>
         </div>
-
       </DialogContent>
-
     </Dialog>
-
   );
-
 }
