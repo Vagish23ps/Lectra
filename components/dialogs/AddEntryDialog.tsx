@@ -266,7 +266,7 @@ export default function AddEntryDialog() {
                     />
 
                     <span className="text-foreground">
-                      Add to Pending List
+                      Mark this task as important
                     </span>
                   </label>
 

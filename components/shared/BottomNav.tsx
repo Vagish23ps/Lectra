@@ -24,7 +24,7 @@ const navItems = [
     path: "/calendar",
   },
   {
-    label: "Pending",
+    label: "Important Tasks",
     icon: ClipboardList,
     path: "/pending",
   },

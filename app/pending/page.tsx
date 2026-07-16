@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -12,7 +13,9 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import ViewEntryDialog from "@/components/dialogs/ViewEntryDialog";
 import { useEntryStore } from "@/store/entryStore";
+import { Entry } from "@/types/entry";
 
 export default function PendingPage() {
   const router = useRouter();
@@ -22,6 +25,12 @@ export default function PendingPage() {
   const updateEntry = useEntryStore(
     (state) => state.updateEntry
   );
+
+  const [selectedEntry, setSelectedEntry] =
+    useState<Entry | null>(null);
+
+  const [openView, setOpenView] =
+    useState(false);
 
   const pendingWorks = entries.flatMap((entry) =>
     entry.works
@@ -63,7 +72,7 @@ export default function PendingPage() {
   };
 
   return (
-    <main className="min-h-screen bg-background px-5 pb-8 pt-7 text-foreground">
+    <main className="min-h-screen bg-background px-5 pb-28 pt-7 text-foreground">
       <div className="mx-auto w-full max-w-4xl">
         {/* Header */}
 
@@ -73,14 +82,13 @@ export default function PendingPage() {
             size="icon"
             className="shrink-0 rounded-xl"
             onClick={() => router.push("/")}
-            aria-label="Back to Dashboard"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
 
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              Pending Work
+            <h1 className="text-2xl font-bold tracking-tight">
+              Important Tasks
             </h1>
 
             <p className="mt-1 text-sm text-muted-foreground">
@@ -95,7 +103,7 @@ export default function PendingPage() {
           </div>
 
           {pendingWorks.length > 0 && (
-            <div className="flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/10 px-3 text-sm font-semibold text-amber-400">
+            <div className="flex h-10 min-w-10 items-center justify-center rounded-full bg-amber-500/10 px-3 text-sm font-semibold text-amber-400">
               {pendingWorks.length}
             </div>
           )}
@@ -110,19 +118,17 @@ export default function PendingPage() {
                 <CheckCircle2 className="h-8 w-8 text-green-400" />
               </div>
 
-              <h2 className="mt-5 text-xl font-semibold text-foreground">
+              <h2 className="mt-5 text-xl font-semibold">
                 You're all caught up
               </h2>
 
-              <p className="mt-2 max-w-xs text-sm leading-6 text-muted-foreground">
-                No pending tasks right now. Enjoy the suspiciously peaceful
-                moment 🎉
+              <p className="mt-2 max-w-xs text-sm text-muted-foreground">
+                No pending tasks right now. Enjoy the suspiciously
+                peaceful moment 🎉
               </p>
             </CardContent>
           </Card>
         ) : (
-          /* Pending Tasks */
-
           <div className="mt-8 space-y-4">
             {pendingWorks.map(({ work, entry }) => (
               <Card
@@ -130,15 +136,22 @@ export default function PendingPage() {
                 className="overflow-hidden rounded-3xl border-border bg-card transition-colors hover:border-primary/50"
               >
                 <CardContent className="p-5">
-                  {/* Task Header */}
+                  {/* Clickable Header */}
 
-                  <div className="flex items-start gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedEntry(entry);
+                      setOpenView(true);
+                    }}
+                    className="group flex w-full items-start gap-3 rounded-xl p-2 text-left transition-colors hover:bg-muted/40"
+                  >
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400">
                       <ListTodo className="h-5 w-5" />
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      <p className="break-words text-base font-semibold leading-6 text-foreground">
+                      <p className="break-words text-base font-semibold">
                         {work.task}
                       </p>
 
@@ -157,15 +170,15 @@ export default function PendingPage() {
                       </div>
                     </div>
 
-                    <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
-                  </div>
+                    <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1" />
+                  </button>
 
                   {/* Deadline */}
 
                   <div className="mt-5 border-t border-border pt-4">
                     {work.deadline ? (
                       <div className="flex items-center gap-2 text-sm text-amber-400">
-                        <CalendarDays className="h-4 w-4 shrink-0" />
+                        <CalendarDays className="h-4 w-4" />
 
                         <span>
                           Due{" "}
@@ -180,22 +193,19 @@ export default function PendingPage() {
                       </div>
                     ) : (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Clock3 className="h-4 w-4 shrink-0" />
+                        <Clock3 className="h-4 w-4" />
 
                         <span>No deadline set</span>
                       </div>
                     )}
                   </div>
 
-                  {/* Complete Action */}
+                  {/* Complete Button */}
 
                   <Button
-                    className="mt-5 h-11 w-full rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
+                    className="mt-5 h-11 w-full rounded-xl"
                     onClick={() =>
-                      completeWork(
-                        entry.id,
-                        work.id
-                      )
+                      completeWork(entry.id, work.id)
                     }
                   >
                     <CheckCircle2 className="mr-2 h-4 w-4" />
@@ -206,6 +216,14 @@ export default function PendingPage() {
             ))}
           </div>
         )}
+
+        {/* View Dialog */}
+
+        <ViewEntryDialog
+          open={openView}
+          onOpenChange={setOpenView}
+          entry={selectedEntry}
+        />
       </div>
     </main>
   );

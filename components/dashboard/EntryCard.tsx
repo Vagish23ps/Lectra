@@ -108,7 +108,7 @@ export default function EntryCard({ entry }: EntryCardProps) {
                   <Clock3 className="h-3.5 w-3.5" />
 
                   <span>
-                    {pendingCount} Pending
+                    {pendingCount} Important
                   </span>
                 </div>
               )}
