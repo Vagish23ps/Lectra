@@ -1,10 +1,21 @@
 # 📒 Lectra
 
+![Next.js](https://img.shields.io/badge/Next.js-16-black)
+![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue)
+![PWA](https://img.shields.io/badge/PWA-Installable-success)
+![License](https://img.shields.io/badge/License-MIT-green)
+
+## 🚀 Live Demo
+
+**🌐 Web App:** https://lectra-psi.vercel.app
+
 > **Capture Today. Recall Anytime.**
 
 Lectra is a modern, mobile-first note and task management Progressive Web App (PWA) built with Next.js. It helps users quickly capture notes, organize them into categories, manage important tasks, and revisit previous entries through calendar and search features, all in a clean, distraction-free interface.
 
 ---
+> A lightweight note-taking and task management Progressive Web App designed for students and everyday productivity.
+----
 
 # ✨ Features
 
@@ -66,7 +77,19 @@ Instantly search using:
 
 # 🖼️ Screenshots
 
-> Screenshots will be added after the first stable release.
+| Dashboard | Add Entry |
+|-----------|-----------|
+| ![](Screenshots/dashboard.png) | ![](Screenshots/add-entry.png) |
+
+
+| Calendar | Search |
+|----------|--------|
+| ![](Screenshots/calendar.png) | ![](Screenshots/search.png) |
+
+
+  | Important Tasks | 
+  |----------------|
+  | ![](Screenshots/important-tasks.png) | 
 
 ---
 
