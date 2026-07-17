@@ -1,39 +1,39 @@
 # 📒 Lectra
 
-> Capture Today. Recall Anytime.
+> **Capture Today. Recall Anytime.**
 
-Lectra is a modern, mobile-first note and task management web application built with Next.js. It helps users quickly capture notes, organize them into categories, manage important tasks, and revisit previous entries through calendar and search features.
+Lectra is a modern, mobile-first note and task management Progressive Web App (PWA) built with Next.js. It helps users quickly capture notes, organize them into categories, manage important tasks, and revisit previous entries through calendar and search features, all in a clean, distraction-free interface.
 
 ---
 
-## ✨ Features
+# ✨ Features
 
-### 📝 Entry Management
+## 📝 Entry Management
 
-- Add new entries
-- Edit existing entries
-- View detailed entries
-- Delete entries
-- Key Notes support
-- Additional Notes support
+- Create, edit, view, and delete entries
+- Organize entries using categories
+- Add Key Notes for quick highlights
+- Add Additional Notes for detailed information
 
-### ✅ Task Management
+## ✅ Important Tasks
 
-- Add multiple tasks to an entry
+- Add multiple tasks to every entry
 - Mark tasks as Important
-- Optional deadlines
+- Set optional deadlines
 - Mark tasks as completed
-- Dedicated Important Tasks page
+- Automatically sort tasks by nearest deadline
+- Tasks without deadlines are placed at the end
+- Open the original entry directly from any task
 
-### 📅 Calendar
+## 📅 Calendar
 
-- View entries by date
-- Highlight days containing entries
-- Browse previous notes easily
+- Browse entries by date
+- Highlight dates containing entries
+- Quickly revisit previous notes
 
-### 🔍 Smart Search
+## 🔍 Smart Search
 
-Search entries using:
+Instantly search using:
 
 - Entry Name
 - Category
@@ -41,24 +41,32 @@ Search entries using:
 - Additional Notes
 - Tasks
 
-### 🎨 User Interface
+## 🎨 User Interface
 
-- Responsive Mobile First Design
-- Clean Modern UI
-- Dark Theme
-- Bottom Navigation
-- Dialog Based Workflow
+- Mobile-first responsive design
+- Modern dark theme
+- Bottom navigation
+- Dialog-based workflow
+- Clean and intuitive user experience
 
-### 💾 Storage
+## 💾 Storage
 
-- Local Storage Persistence
-- Data remains after refreshing the browser
+- Local Storage persistence
+- Automatic data saving
+- Data remains after browser refresh
+- No account required
+
+## 📱 Progressive Web App
+
+- Installable on desktop and mobile
+- Offline support
+- Native app-like experience
 
 ---
 
 # 🖼️ Screenshots
 
-> Screenshots will be added soon.
+> Screenshots will be added after the first stable release.
 
 ---
 
@@ -72,14 +80,15 @@ Search entries using:
 | Tailwind CSS | Styling |
 | shadcn/ui | UI Components |
 | Zustand | State Management |
-| date-fns | Date Handling |
+| date-fns | Date Formatting |
 | Lucide React | Icons |
+| PWA | Installable Web Application |
 
 ---
 
 # 📂 Project Structure
 
-```
+```text
 app/
 components/
 store/
@@ -92,39 +101,39 @@ public/
 
 # 🚀 Getting Started
 
-Clone the repository
+## Clone the repository
 
 ```bash
 git clone https://github.com/Vagish23ps/Lectra.git
 ```
 
-Go inside the project
+## Navigate into the project
 
 ```bash
 cd Lectra
 ```
 
-Install dependencies
+## Install dependencies
 
 ```bash
 npm install
 ```
 
-Run development server
+## Start the development server
 
 ```bash
 npm run dev
 ```
 
-Open
+Open your browser and visit:
 
-```
+```text
 http://localhost:3000
 ```
 
 ---
 
-# 📱 Current Features
+# 📱 Current Features (v1.0)
 
 - Dashboard
 - Add Entry
@@ -132,11 +141,16 @@ http://localhost:3000
 - View Entry
 - Delete Entry
 - Calendar View
-- Search
+- Smart Search
 - Important Tasks
-- Responsive UI
-- Local Storage
-- GitHub Backup
+- Task Completion
+- Automatic Task Sorting
+- Responsive Design
+- Dark Theme
+- Local Storage Persistence
+- Progressive Web App (PWA)
+- Offline Support
+- Installable Application
 
 ---
 
@@ -144,23 +158,31 @@ http://localhost:3000
 
 ## Version 1.1
 
+- Push notifications for important tasks
 - Improved task management
+- Better search experience
 - UI refinements
-- Better category suggestions
+- Performance optimizations
+- Bug fixes based on user feedback
 
 ## Version 1.2
 
-- Progressive Web App (PWA)
-- Installable Application
-- Offline Support
+- File attachments
+- Image support in notes
+- Rich text editor
+- Improved calendar experience
+- Data export and import
 
-## Future Plans
+## Version 2.0
 
 - Firebase Cloud Sync
 - Google Authentication
-- File Attachments
-- Notifications
-- Cross-device Synchronization
+- Cross-device synchronization
+- AI-powered study assistant
+- Smart note summaries
+- AI task suggestions
+- Semester productivity insights
+- Advanced analytics dashboard
 
 ---
 
@@ -168,7 +190,20 @@ http://localhost:3000
 
 Lectra was built to simplify everyday note-taking by combining notes, tasks, and calendar-based organization into one lightweight application.
 
-The goal is to create a clean, distraction-free experience that allows users to capture information quickly and recall it anytime.
+Instead of switching between multiple apps for notes, reminders, and planning, Lectra provides a clean, distraction-free workspace where users can capture information quickly and recall it effortlessly whenever they need it.
+
+---
+
+# 🤝 Contributing
+
+Contributions, suggestions, and feature ideas are always welcome.
+
+If you'd like to improve Lectra:
+
+1. Fork the repository
+2. Create a new feature branch
+3. Commit your changes
+4. Open a Pull Request
 
 ---
 
@@ -178,7 +213,7 @@ The goal is to create a clean, distraction-free experience that allows users to 
 
 Engineering Student
 
-IoT • Cybersecurity • Blockchain
+**Branch:** IoT • Cybersecurity • Blockchain
 
 GitHub:
 https://github.com/Vagish23ps
@@ -187,6 +222,12 @@ https://github.com/Vagish23ps
 
 # 📄 License
 
-This project is licensed under the MIT License.
+This project is licensed under the **MIT License**.
 
-Feel free to use, modify and learn from this project.
+Feel free to use, modify, and learn from this project.
+
+---
+
+## ⭐ Support
+
+If you found this project helpful, consider giving it a ⭐ on GitHub. It helps the project reach more people and supports future development.
