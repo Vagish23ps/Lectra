@@ -53,8 +53,12 @@
           {/* Brand */}
 
           <header className="flex items-center gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-xl font-bold text-primary-foreground shadow-lg shadow-primary/20">
-              L
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl shadow-lg shadow-primary/20">
+              <img
+                src="/favicon.png"
+                alt="Lectra Logo"
+                className="h-full w-full object-cover"
+              />
             </div>
 
             <div className="min-w-0">

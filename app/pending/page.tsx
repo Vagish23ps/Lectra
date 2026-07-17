@@ -32,19 +32,34 @@ export default function PendingPage() {
   const [openView, setOpenView] =
     useState(false);
 
-  const pendingWorks = entries.flatMap((entry) =>
-    entry.works
-      .filter(
-        (work) =>
-          work.addToPending &&
-          !work.completed &&
-          work.task.trim() !== ""
-      )
-      .map((work) => ({
-        work,
-        entry,
-      }))
-  );
+  const pendingWorks = entries
+    .flatMap((entry) =>
+      entry.works
+        .filter(
+          (work) =>
+            work.addToPending &&
+            !work.completed &&
+            work.task.trim() !== ""
+        )
+        .map((work) => ({
+          work,
+          entry,
+        }))
+    )
+    .sort((a, b) => {
+      // Both have no deadline
+      if (!a.work.deadline && !b.work.deadline) return 0;
+
+      // Tasks without deadline go to the bottom
+      if (!a.work.deadline) return 1;
+      if (!b.work.deadline) return -1;
+
+      // Nearest deadline first
+      return (
+        new Date(a.work.deadline).getTime() -
+        new Date(b.work.deadline).getTime()
+      );
+    });
 
   const completeWork = (
     entryId: string,
@@ -70,7 +85,6 @@ export default function PendingPage() {
 
     updateEntry(updatedEntry);
   };
-
   return (
     <main className="min-h-screen bg-background px-5 pb-28 pt-7 text-foreground">
       <div className="mx-auto w-full max-w-4xl">
@@ -175,29 +189,46 @@ export default function PendingPage() {
 
                   {/* Deadline */}
 
-                  <div className="mt-5 border-t border-border pt-4">
+                  <div className="mt-5 border-t border-border pt-4 space-y-2">
                     {work.deadline ? (
                       <div className="flex items-center gap-2 text-sm text-amber-400">
-                        <CalendarDays className="h-4 w-4" />
+                        <CalendarDays className="h-4 w-4 shrink-0" />
 
                         <span>
                           Due{" "}
-                          {new Date(
-                            `${work.deadline}T00:00:00`
-                          ).toLocaleDateString(undefined, {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                          })}
+                          {new Date(`${work.deadline}T00:00:00`).toLocaleDateString(
+                            undefined,
+                            {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            }
+                          )}
                         </span>
                       </div>
                     ) : (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Clock3 className="h-4 w-4" />
+                        <Clock3 className="h-4 w-4 shrink-0" />
 
                         <span>No deadline set</span>
                       </div>
                     )}
+
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Clock3 className="h-4 w-4 shrink-0" />
+
+                      <span>
+                        Created{" "}
+                        {new Date(entry.createdAt).toLocaleString(undefined, {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                          hour12: true,
+                        })}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Complete Button */}

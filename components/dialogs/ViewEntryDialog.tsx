@@ -266,8 +266,16 @@ export default function ViewEntryDialog({
                   Created
                 </p>
 
-                <p className="mt-0.5 text-sm font-medium text-foreground">
-                  {new Date(entry.createdAt).toLocaleString()}
+                <p className="mt-2 text-muted-foreground">
+                  {new Date(entry.createdAt).toLocaleString("en-IN", {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true,
+                  })}
                 </p>
               </div>
             </div>
