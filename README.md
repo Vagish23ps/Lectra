@@ -84,7 +84,7 @@ Instantly search using:
 
 | Calendar | Search |
 |----------|--------|
-| ![](Screenshots/calendar.png) | ![](Screenshots/search.png) |
+| ![](Screenshots/calendar-ui.png) | ![](Screenshots/search.png) |
 
 
   | Important Tasks | 
