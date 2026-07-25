@@ -93,7 +93,7 @@ function Calendar({
           "flex-1 rounded-(--cell-radius) text-[0.8rem] font-normal text-muted-foreground select-none",
           defaultClassNames.weekday
         ),
-        week: cn("mt-2 flex w-full", defaultClassNames.week),
+        week: cn("mt-3 flex justify-between", defaultClassNames.week),
         week_number_header: cn(
           "w-(--cell-size) select-none",
           defaultClassNames.week_number_header
@@ -103,12 +103,9 @@ function Calendar({
           defaultClassNames.week_number
         ),
         day: cn(
-          "group/day relative aspect-square h-full w-full rounded-(--cell-radius) p-0 text-center select-none [&:last-child[data-selected=true]_button]:rounded-r-(--cell-radius)",
-          props.showWeekNumber
-            ? "[&:nth-child(2)[data-selected=true]_button]:rounded-l-(--cell-radius)"
-            : "[&:first-child[data-selected=true]_button]:rounded-l-(--cell-radius)",
-          defaultClassNames.day
-        ),
+  "group/day relative flex items-center justify-center p-0",
+  defaultClassNames.day
+),    
         range_start: cn(
           "relative isolate z-0 rounded-l-(--cell-radius) bg-muted after:absolute after:inset-y-0 after:right-0 after:w-4 after:bg-muted",
           defaultClassNames.range_start
@@ -175,7 +172,7 @@ function Calendar({
         },
         ...components,
       }}
-      {...props}
+      {...props}  
     />
   )
 }
@@ -186,13 +183,18 @@ function CalendarDayButton({
   modifiers,
   locale,
   ...props
-}: React.ComponentProps<typeof DayButton> & { locale?: Partial<Locale> }) {
-  const defaultClassNames = getDefaultClassNames()
+}: React.ComponentProps<typeof DayButton> & {
+  locale?: Partial<Locale>;
+}) {
+  const defaultClassNames = getDefaultClassNames();
 
-  const ref = React.useRef<HTMLButtonElement>(null)
+  const ref = React.useRef<HTMLButtonElement>(null);
+
   React.useEffect(() => {
-    if (modifiers.focused) ref.current?.focus()
-  }, [modifiers.focused])
+    if (modifiers.focused) {
+      ref.current?.focus();
+    }
+  }, [modifiers.focused]);
 
   return (
     <Button
@@ -212,13 +214,32 @@ function CalendarDayButton({
       data-range-end={modifiers.range_end}
       data-range-middle={modifiers.range_middle}
       className={cn(
-        "relative isolate z-10 flex aspect-square size-auto w-full min-w-(--cell-size) flex-col gap-1 border-0 leading-none font-normal group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:border-ring group-data-[focused=true]/day:ring-[3px] group-data-[focused=true]/day:ring-ring/50 data-[range-end=true]:rounded-(--cell-radius) data-[range-end=true]:rounded-r-(--cell-radius) data-[range-end=true]:bg-primary data-[range-end=true]:text-primary-foreground data-[range-middle=true]:rounded-none data-[range-middle=true]:bg-muted data-[range-middle=true]:text-foreground data-[range-start=true]:rounded-(--cell-radius) data-[range-start=true]:rounded-l-(--cell-radius) data-[range-start=true]:bg-primary data-[range-start=true]:text-primary-foreground data-[selected-single=true]:bg-primary data-[selected-single=true]:text-primary-foreground dark:hover:text-foreground [&>span]:text-xs [&>span]:opacity-70",
-        defaultClassNames.day,
+        "relative mx-auto flex h-10 w-10 items-center justify-center rounded-full",
+        "border border-transparent",
+        "transition-all duration-200 ease-out",
+        "hover:scale-110",
+        "hover:-translate-y-0.5",
+        "hover:shadow-lg",
+
+        // Heatmap Colors
+        modifiers.completed &&
+          "bg-emerald-600 text-white hover:bg-emerald-500",
+
+        modifiers.pending &&
+          "bg-amber-500 text-white hover:bg-amber-400",
+
+        modifiers.important &&
+          "bg-red-600 text-white hover:bg-red-500",
+
+        // Selected
+        modifiers.selected &&
+          "ring-2 ring-primary ring-offset-2 ring-offset-background",
+
         className
       )}
       {...props}
     />
-  )
+  );
 }
 
 export { Calendar, CalendarDayButton }

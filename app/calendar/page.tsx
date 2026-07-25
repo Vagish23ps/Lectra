@@ -32,9 +32,58 @@ export default function CalendarPage() {
     )
   );
 
-  const entryDates = entries.map(
-    (entry) => new Date(entry.createdAt)
+  type DayStatus = "completed" | "pending" | "important";
+
+const completedDates: Date[] = [];
+const pendingDates: Date[] = [];
+const importantDates: Date[] = [];
+
+const dayStatus = new Map<string, DayStatus>();
+
+entries.forEach((entry) => {
+  const key = format(new Date(entry.createdAt), "yyyy-MM-dd");
+
+  const hasImportant = entry.works.some(
+    (work) =>
+      work.addToPending &&
+      !work.completed &&
+      work.task.trim() !== ""
   );
+
+  const hasPending = entry.works.some(
+    (work) =>
+      !work.completed &&
+      work.task.trim() !== ""
+  );
+
+  let status: DayStatus = "completed";
+
+  if (hasImportant) {
+    status = "important";
+  } else if (hasPending) {
+    status = "pending";
+  }
+
+  const existing = dayStatus.get(key);
+
+  if (existing === "important") return;
+
+  if (existing === "pending" && status === "completed") return;
+
+  dayStatus.set(key, status);
+});
+
+dayStatus.forEach((status, date) => {
+  const d = new Date(date);
+
+  if (status === "completed") {
+    completedDates.push(d);
+  } else if (status === "pending") {
+    pendingDates.push(d);
+  } else {
+    importantDates.push(d);
+  }
+});
 
   return (
     <main className="min-h-screen bg-background px-5 pb-8 pt-7 text-foreground">
@@ -77,24 +126,31 @@ export default function CalendarPage() {
                   }
                 }}
                 modifiers={{
-                  hasEntry: entryDates,
+                  completed: completedDates,
+                  pending: pendingDates,
+                  important: importantDates,
                 }}
-                modifiersClassNames={{
-                  hasEntry:
-                    "font-semibold text-primary underline decoration-primary underline-offset-4",
-                }}
-                className="w-full max-w-sm"
+                className=  "w-full max-w-sm"
               />
             </div>
 
             {/* Calendar Hint */}
 
-            <div className="mt-4 flex items-center justify-center gap-2 border-t border-border pt-4 text-xs text-muted-foreground">
-              <span className="h-2 w-2 rounded-full bg-primary" />
+            <div className="mt-4 flex items-center justify-center gap-6 border-t border-border pt-4 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                <span>Completed</span>
+              </div>
 
-              <span>
-                Highlighted dates contain entries
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+                <span>Pending</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
+                <span>Important</span>
+              </div>
             </div>
           </CardContent>
         </Card>
