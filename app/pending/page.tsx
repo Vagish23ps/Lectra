@@ -17,22 +17,28 @@ import ViewEntryDialog from "@/components/dialogs/ViewEntryDialog";
 import { useEntryStore } from "@/store/entryStore";
 import { Entry } from "@/types/entry";
 
+type PendingWorkItem = {
+  work: Entry["works"][number];
+  entry: Entry;
+  isOverdue: boolean;
+  isDueToday: boolean;
+  isDueTomorrow: boolean;
+  hasDeadline: boolean;
+};
+
 export default function PendingPage() {
   const router = useRouter();
-
   const entries = useEntryStore((state) => state.entries);
+  const updateEntry = useEntryStore((state) => state.updateEntry);
 
-  const updateEntry = useEntryStore(
-    (state) => state.updateEntry
-  );
+  const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
+  const [openView, setOpenView] = useState(false);
+  const [activeTab, setActiveTab] = useState<"important" | "other">("important");
 
-  const [selectedEntry, setSelectedEntry] =
-    useState<Entry | null>(null);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-  const [openView, setOpenView] =
-    useState(false);
-
-  const pendingWorks = entries
+  const pendingWorks: PendingWorkItem[] = entries
     .flatMap((entry) =>
       entry.works
         .filter(
@@ -41,91 +47,280 @@ export default function PendingPage() {
             !work.completed &&
             work.task.trim() !== ""
         )
-        .map((work) => ({
-          work,
-          entry,
-        }))
+        .map((work) => {
+          const deadlineDate = work.deadline
+            ? new Date(`${work.deadline}T00:00:00`)
+            : null;
+
+          if (deadlineDate) {
+            deadlineDate.setHours(0, 0, 0, 0);
+          }
+
+          const diffDays =
+            deadlineDate !== null
+              ? Math.floor(
+                  (deadlineDate.getTime() - today.getTime()) /
+                    (1000 * 60 * 60 * 24)
+                )
+              : null;
+
+          return {
+            work,
+            entry,
+            hasDeadline: deadlineDate !== null,
+            isOverdue: diffDays !== null && diffDays < 0,
+            isDueToday: diffDays === 0,
+            isDueTomorrow: diffDays === 1,
+          };
+        })
     )
     .sort((a, b) => {
-      // Both have no deadline
-      if (!a.work.deadline && !b.work.deadline) return 0;
+      const aDeadline = a.work.deadline
+        ? new Date(`${a.work.deadline}T00:00:00`).getTime()
+        : Number.MAX_SAFE_INTEGER;
 
-      // Tasks without deadline go to the bottom
-      if (!a.work.deadline) return 1;
-      if (!b.work.deadline) return -1;
+      const bDeadline = b.work.deadline
+        ? new Date(`${b.work.deadline}T00:00:00`).getTime()
+        : Number.MAX_SAFE_INTEGER;
 
-      // Nearest deadline first
-      return (
-        new Date(a.work.deadline).getTime() -
-        new Date(b.work.deadline).getTime()
-      );
+      return aDeadline - bDeadline;
     });
 
-  const completeWork = (
-    entryId: string,
-    workId: string
-  ) => {
-    const entry = entries.find(
-      (item) => item.id === entryId
-    );
+  const overdueTasks = pendingWorks.filter((item) => item.isOverdue);
 
+const dueTodayTasks = pendingWorks.filter((item) => item.isDueToday);
+
+const tomorrowTasks = pendingWorks.filter((item) => item.isDueTomorrow);
+
+const remainingTasks = pendingWorks.filter(
+  (item) =>
+    item.hasDeadline &&
+    !item.isOverdue &&
+    !item.isDueToday &&
+    !item.isDueTomorrow
+);
+
+const otherImportantTasks = pendingWorks.filter(
+  (item) => !item.hasDeadline
+);
+
+  const normalTasks = entries.flatMap((entry) =>
+    entry.works
+      .filter(
+        (work) =>
+          !work.addToPending &&
+          !work.completed &&
+          work.task.trim() !== ""
+      )
+      .map((work) => ({
+        work,
+        entry,
+      }))
+  );
+
+  const completeWork = (entryId: string, workId: string) => {
+    const entry = entries.find((item) => item.id === entryId);
     if (!entry) return;
 
-    const updatedEntry = {
+    const updatedEntry: Entry = {
       ...entry,
       works: entry.works.map((work) =>
-        work.id === workId
-          ? {
-              ...work,
-              completed: true,
-            }
-          : work
+        work.id === workId ? { ...work, completed: true } : work
       ),
     };
 
     updateEntry(updatedEntry);
   };
+
+  const renderTaskCard = (item: PendingWorkItem) => {
+    const { work, entry, isOverdue, isDueToday, isDueTomorrow } = item;
+
+    const borderClass = isOverdue
+      ? "border-2 border-red-500"
+      : isDueToday
+      ? "border-2 border-orange-500"
+      : isDueTomorrow
+      ? "border-2 border-yellow-500"
+      : "border border-border";
+
+    const iconClass = isOverdue
+      ? "bg-red-500/10 text-red-400"
+      : isDueToday
+      ? "bg-orange-500/10 text-orange-400"
+      : isDueTomorrow
+      ? "bg-yellow-500/10 text-yellow-400"
+      : "bg-amber-500/10 text-amber-400";
+
+    const deadlineTextClass = isOverdue
+      ? "text-red-400"
+      : isDueToday
+      ? "text-orange-400"
+      : isDueTomorrow
+      ? "text-yellow-400"
+      : "text-amber-400";
+
+    return (
+      <Card
+        key={work.id}
+        className={`overflow-hidden rounded-3xl bg-card transition-all hover:border-primary/50 ${borderClass}`}
+      >
+        <CardContent className="p-5">
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedEntry(entry);
+              setOpenView(true);
+            }}
+            className="group flex w-full items-start gap-3 rounded-xl p-2 text-left transition-colors hover:bg-muted/40"
+          >
+            <div
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${iconClass}`}
+            >
+              <ListTodo className="h-5 w-5" />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <p className="break-words text-base font-semibold">
+                {work.task}
+              </p>
+
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                <span className="rounded-full bg-primary/10 px-2.5 py-1 font-medium text-primary">
+                  {entry.subject}
+                </span>
+
+                <span className="text-muted-foreground">•</span>
+
+                <span className="text-muted-foreground">
+                  {entry.entryName}
+                </span>
+              </div>
+            </div>
+
+            <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1" />
+          </button>
+
+          <div className="mt-5 space-y-2 border-t border-border pt-4">
+            {work.deadline ? (
+              <div className={`flex items-center gap-2 text-sm ${deadlineTextClass}`}>
+                <CalendarDays className="h-4 w-4 shrink-0" />
+                <span>
+                  Due{" "}
+                  {new Date(`${work.deadline}T00:00:00`).toLocaleDateString(
+                    undefined,
+                    {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    }
+                  )}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Clock3 className="h-4 w-4 shrink-0" />
+                <span>No deadline set</span>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Clock3 className="h-4 w-4 shrink-0" />
+              <span>
+                Created{" "}
+                {new Date(entry.createdAt).toLocaleString(undefined, {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                  hour12: true,
+                })}
+              </span>
+            </div>
+          </div>
+
+          <Button
+            className="mt-5 h-11 w-full rounded-xl"
+            onClick={() => completeWork(entry.id, work.id)}
+          >
+            <CheckCircle2 className="mr-2 h-4 w-4" />
+            Mark as Completed
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
     <main className="min-h-screen bg-background px-5 pb-28 pt-7 text-foreground">
       <div className="mx-auto w-full max-w-4xl">
         {/* Header */}
-
         <header className="flex items-start gap-4">
           <Button
             variant="outline"
             size="icon"
             className="shrink-0 rounded-xl"
             onClick={() => router.push("/")}
+            aria-label="Back to Dashboard"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
 
           <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-bold tracking-tight">
-              Important Tasks
+              Pending List
             </h1>
 
             <p className="mt-1 text-sm text-muted-foreground">
-              {pendingWorks.length === 0
+              {overdueTasks.length + dueTodayTasks.length + tomorrowTasks.length + remainingTasks.length === 0
                 ? "Nothing waiting for you"
-                : `${pendingWorks.length} ${
-                    pendingWorks.length === 1
+                : `${overdueTasks.length + dueTodayTasks.length + tomorrowTasks.length + remainingTasks.length} ${
+                    overdueTasks.length + dueTodayTasks.length + tomorrowTasks.length + remainingTasks.length === 1
                       ? "task"
                       : "tasks"
                   } waiting for you`}
             </p>
           </div>
 
-          {pendingWorks.length > 0 && (
+          {(overdueTasks.length + dueTodayTasks.length + tomorrowTasks.length + remainingTasks.length) > 0 && (
             <div className="flex h-10 min-w-10 items-center justify-center rounded-full bg-amber-500/10 px-3 text-sm font-semibold text-amber-400">
-              {pendingWorks.length}
+              {overdueTasks.length + dueTodayTasks.length + tomorrowTasks.length + remainingTasks.length}
             </div>
           )}
         </header>
 
-        {/* Empty State */}
+        {/* Tabs */}
+        <div className="mt-6 grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => setActiveTab("important")}
+            className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition-all ${
+              activeTab === "important"
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border bg-card text-muted-foreground hover:border-primary/40"
+            }`}
+          >
+            Important Tasks
+          </button>
 
-        {pendingWorks.length === 0 ? (
+          <button
+            type="button"
+            onClick={() => setActiveTab("other")}
+            className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition-all ${
+              activeTab === "other"
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border bg-card text-muted-foreground hover:border-primary/40"
+            }`}
+          >
+            Other Tasks
+          </button>
+        </div>
+
+        {/* Empty State */}
+        {overdueTasks.length === 0 &&
+        dueTodayTasks.length === 0 &&
+        tomorrowTasks.length === 0 &&
+        remainingTasks.length === 0 ? (
           <Card className="mt-10 rounded-3xl border-border bg-card">
             <CardContent className="flex flex-col items-center px-6 py-14 text-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-green-500/10">
@@ -137,119 +332,294 @@ export default function PendingPage() {
               </h2>
 
               <p className="mt-2 max-w-xs text-sm text-muted-foreground">
-                No pending tasks right now. Enjoy the suspiciously
-                peaceful moment 🎉
+                No pending tasks right now. Enjoy the suspiciously peaceful
+                moment 🎉
               </p>
             </CardContent>
           </Card>
         ) : (
-          <div className="mt-8 space-y-4">
-            {pendingWorks.map(({ work, entry }) => (
-              <Card
-                key={work.id}
-                className="overflow-hidden rounded-3xl border-border bg-card transition-colors hover:border-primary/50"
-              >
-                <CardContent className="p-5">
-                  {/* Clickable Header */}
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedEntry(entry);
-                      setOpenView(true);
-                    }}
-                    className="group flex w-full items-start gap-3 rounded-xl p-2 text-left transition-colors hover:bg-muted/40"
-                  >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400">
-                      <ListTodo className="h-5 w-5" />
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <p className="break-words text-base font-semibold">
-                        {work.task}
-                      </p>
-
-                      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                        <span className="rounded-full bg-primary/10 px-2.5 py-1 font-medium text-primary">
-                          {entry.subject}
-                        </span>
-
-                        <span className="text-muted-foreground">
-                          •
-                        </span>
-
-                        <span className="text-muted-foreground">
-                          {entry.entryName}
-                        </span>
-                      </div>
-                    </div>
-
-                    <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1" />
-                  </button>
-
-                  {/* Deadline */}
-
-                  <div className="mt-5 border-t border-border pt-4 space-y-2">
-                    {work.deadline ? (
-                      <div className="flex items-center gap-2 text-sm text-amber-400">
-                        <CalendarDays className="h-4 w-4 shrink-0" />
-
-                        <span>
-                          Due{" "}
-                          {new Date(`${work.deadline}T00:00:00`).toLocaleDateString(
-                            undefined,
-                            {
-                              day: "numeric",
-                              month: "short",
-                              year: "numeric",
-                            }
-                          )}
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Clock3 className="h-4 w-4 shrink-0" />
-
-                        <span>No deadline set</span>
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock3 className="h-4 w-4 shrink-0" />
-
-                      <span>
-                        Created{" "}
-                        {new Date(entry.createdAt).toLocaleString(undefined, {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                          hour: "numeric",
-                          minute: "2-digit",
-                          hour12: true,
-                        })}
-                      </span>
-                    </div>
+          <div className="mt-8">
+            {activeTab === "important" ? (
+              <section className="space-y-8">
+                <div>
+                  <div className="mb-3 flex items-center justify-between">
+                    <h2 className="text-lg font-semibold tracking-tight">
+                      Important Tasks
+                    </h2>
+                    <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                      {overdueTasks.length + dueTodayTasks.length + tomorrowTasks.length + remainingTasks.length}
+                    </span>
                   </div>
 
-                  {/* Complete Button */}
+                  {overdueTasks.length === 0 &&
+                   dueTodayTasks.length === 0 &&
+                   tomorrowTasks.length === 0 &&
+                   remainingTasks.length === 0 ? (
+                    <Card className="rounded-3xl border-border bg-card">
+                      <CardContent className="px-6 py-8 text-sm text-muted-foreground">
+                        No important tasks with deadlines right now.
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="space-y-8">
+  {overdueTasks.length > 0 && (
+    <div>
+      <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-red-400">
+        🔴 Overdue
+      </h3>
 
-                  <Button
-                    className="mt-5 h-11 w-full rounded-xl"
-                    onClick={() =>
-                      completeWork(entry.id, work.id)
-                    }
-                  >
-                    <CheckCircle2 className="mr-2 h-4 w-4" />
-                    Mark as Completed
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+      <div className="space-y-4">
+        {overdueTasks.map(renderTaskCard)}
+      </div>
+    </div>
+  )}
+
+  {dueTodayTasks.length > 0 && (
+    <div>
+      <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-orange-400">
+        🟠 Due Today
+      </h3>
+
+      <div className="space-y-4">
+        {dueTodayTasks.map(renderTaskCard)}
+      </div>
+    </div>
+  )}
+
+  {tomorrowTasks.length > 0 && (
+    <div>
+      <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-yellow-400">
+        🟡 Tomorrow
+      </h3>
+
+      <div className="space-y-4">
+        {tomorrowTasks.map(renderTaskCard)}
+      </div>
+    </div>
+  )}
+
+  {remainingTasks.length > 0 && (
+    <div>
+      <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-blue-400">
+        🔵 Remaining
+      </h3>
+
+      <div className="space-y-4">
+        {remainingTasks.map(renderTaskCard)}
+      </div>
+    </div>
+  )}
+</div>
+                  )}
+                </div>
+              </section>
+            ) : (
+              <section className="space-y-8">
+                <div>
+                  <div className="mb-3 flex items-center justify-between">
+                    <h2 className="text-lg font-semibold tracking-tight">
+                      Other Tasks
+                    </h2>
+                    <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-secondary-foreground">
+                      {otherImportantTasks.length + normalTasks.length}
+                    </span>
+                  </div>
+
+                  {otherImportantTasks.length === 0 &&
+                  normalTasks.length === 0 ? (
+                    <Card className="rounded-3xl border-border bg-card">
+                      <CardContent className="px-6 py-8 text-sm text-muted-foreground">
+                        No other tasks right now.
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="space-y-4">
+                      {otherImportantTasks.length > 0 && (
+                        <Card className="rounded-3xl border border-border bg-card">
+                          <CardContent className="p-5">
+                            <h3 className="text-sm font-semibold text-foreground">
+                              Important Tasks without Deadline
+                            </h3>
+
+                            <div className="mt-4 space-y-4">
+                              {otherImportantTasks.map((item) => {
+                                const { work, entry } = item;
+
+                                return (
+                                  <Card
+                                    key={work.id}
+                                    className="overflow-hidden rounded-3xl border border-border bg-card transition-all hover:border-primary/50"
+                                  >
+                                    <CardContent className="p-5">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setSelectedEntry(entry);
+                                          setOpenView(true);
+                                        }}
+                                        className="group flex w-full items-start gap-3 rounded-xl p-2 text-left transition-colors hover:bg-muted/40"
+                                      >
+                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400">
+                                          <ListTodo className="h-5 w-5" />
+                                        </div>
+
+                                        <div className="min-w-0 flex-1">
+                                          <p className="break-words text-base font-semibold">
+                                            {work.task}
+                                          </p>
+
+                                          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                                            <span className="rounded-full bg-primary/10 px-2.5 py-1 font-medium text-primary">
+                                              {entry.subject}
+                                            </span>
+
+                                            <span className="text-muted-foreground">•</span>
+
+                                            <span className="text-muted-foreground">
+                                              {entry.entryName}
+                                            </span>
+                                          </div>
+                                        </div>
+
+                                        <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1" />
+                                      </button>
+
+                                      <div className="mt-5 space-y-2 border-t border-border pt-4">
+                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                          <Clock3 className="h-4 w-4 shrink-0" />
+                                          <span>No deadline set</span>
+                                        </div>
+
+                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                          <Clock3 className="h-4 w-4 shrink-0" />
+                                          <span>
+                                            Created{" "}
+                                            {new Date(entry.createdAt).toLocaleString(
+                                              undefined,
+                                              {
+                                                day: "numeric",
+                                                month: "short",
+                                                year: "numeric",
+                                                hour: "numeric",
+                                                minute: "2-digit",
+                                                hour12: true,
+                                              }
+                                            )}
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      <Button
+                                        className="mt-5 h-11 w-full rounded-xl"
+                                        onClick={() => completeWork(entry.id, work.id)}
+                                      >
+                                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                                        Mark as Completed
+                                      </Button>
+                                    </CardContent>
+                                  </Card>
+                                );
+                              })}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {normalTasks.length > 0 && (
+                        <Card className="rounded-3xl border border-border bg-card">
+                          <CardContent className="p-5">
+                            <h3 className="text-sm font-semibold text-foreground">
+                              Normal Tasks
+                            </h3>
+
+                            <div className="mt-4 space-y-4">
+                              {normalTasks.map(({ work, entry }) => (
+                                <Card
+                                  key={work.id}
+                                  className="overflow-hidden rounded-3xl border border-border bg-card transition-all hover:border-primary/50"
+                                >
+                                  <CardContent className="p-5">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedEntry(entry);
+                                        setOpenView(true);
+                                      }}
+                                      className="group flex w-full items-start gap-3 rounded-xl p-2 text-left transition-colors hover:bg-muted/40"
+                                    >
+                                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                                        <ListTodo className="h-5 w-5" />
+                                      </div>
+
+                                      <div className="min-w-0 flex-1">
+                                        <p className="break-words text-base font-semibold">
+                                          {work.task}
+                                        </p>
+
+                                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                                          <span className="rounded-full bg-primary/10 px-2.5 py-1 font-medium text-primary">
+                                            {entry.subject}
+                                          </span>
+
+                                          <span className="text-muted-foreground">•</span>
+
+                                          <span className="text-muted-foreground">
+                                            {entry.entryName}
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1" />
+                                    </button>
+
+                                    <div className="mt-5 space-y-2 border-t border-border pt-4">
+                                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                        <Clock3 className="h-4 w-4 shrink-0" />
+                                        <span>No deadline set</span>
+                                      </div>
+
+                                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                        <Clock3 className="h-4 w-4 shrink-0" />
+                                        <span>
+                                          Created{" "}
+                                          {new Date(entry.createdAt).toLocaleString(
+                                            undefined,
+                                            {
+                                              day: "numeric",
+                                              month: "short",
+                                              year: "numeric",
+                                              hour: "numeric",
+                                              minute: "2-digit",
+                                              hour12: true,
+                                            }
+                                          )}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    <Button
+                                      className="mt-5 h-11 w-full rounded-xl"
+                                      onClick={() => completeWork(entry.id, work.id)}
+                                    >
+                                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                                      Mark as Completed
+                                    </Button>
+                                  </CardContent>
+                                </Card>
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
           </div>
         )}
 
         {/* View Dialog */}
-
         <ViewEntryDialog
           open={openView}
           onOpenChange={setOpenView}

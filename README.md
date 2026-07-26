@@ -7,40 +7,91 @@
 
 ## 🚀 Live Demo
 
-**🌐 Web App:** https://lectra-psi.vercel.app
+🌐 https://lectra-psi.vercel.app
 
 > **Capture Today. Recall Anytime.**
 
-Lectra is a modern, mobile-first note and task management Progressive Web App (PWA) built with Next.js. It helps users quickly capture notes, organize them into categories, manage important tasks, and revisit previous entries through calendar and search features, all in a clean, distraction-free interface.
+Lectra is a modern, mobile-first Progressive Web App (PWA) that combines note-taking, task management, calendar organization, and productivity tools into a single lightweight workspace.
+
+Built with **Next.js**, **TypeScript**, **Tailwind CSS**, and **Zustand**, Lectra helps users capture information quickly, organize tasks efficiently, and revisit previous notes through a clean, distraction-free interface.
 
 ---
-> A lightweight note-taking and task management Progressive Web App designed for students and everyday productivity.
-----
 
 # ✨ Features
 
-## 📝 Entry Management
+## 📝 Smart Note Management
 
-- Create, edit, view, and delete entries
-- Organize entries using categories
-- Add Key Notes for quick highlights
-- Add Additional Notes for detailed information
+- Create, edit, view and delete entries
+- Organize notes using custom categories
+- Key Notes for quick highlights
+- Additional Notes for detailed information
+- Automatic Local Storage persistence
+- Clean dialog-based workflow
 
-## ✅ Important Tasks
+---
 
-- Add multiple tasks to every entry
+## ✅ Intelligent Task Management
+
+Each entry can contain multiple tasks.
+
+Features include:
+
 - Mark tasks as Important
-- Set optional deadlines
+- Optional deadlines
 - Mark tasks as completed
-- Automatically sort tasks by nearest deadline
-- Tasks without deadlines are placed at the end
-- Open the original entry directly from any task
+- Automatic deadline sorting
+- Open the original entry from any task
+- Completion tracking
+
+Tasks are automatically organized into:
+
+- 🔴 Overdue
+- 🟠 Due Today
+- 🟡 Tomorrow
+- 🔵 Remaining
+- 📌 Important Tasks without Deadline
+- 📄 Other Tasks
+
+---
+
+## 📊 Productivity Dashboard
+
+The dashboard provides an overview of your work including:
+
+- Today's Entries
+- Pending Task Summary
+- Overdue Counter
+- Due Today Counter
+- Tomorrow Counter
+- Remaining Counter
+- Other Tasks Counter
+- Quick Add Entry
+- Notification Center
+
+Each task category is clickable and opens the corresponding section in the Pending page.
+
+---
+
+## 🔔 Smart Notifications
+
+Receive reminders for:
+
+- Overdue tasks
+- Tasks due today
+- Upcoming deadlines
+
+Notifications can be viewed directly from the dashboard.
+
+---
 
 ## 📅 Calendar
 
 - Browse entries by date
-- Highlight dates containing entries
-- Quickly revisit previous notes
+- Highlight days containing notes
+- View previous entries instantly
+- Timeline-based navigation
+
+---
 
 ## 🔍 Smart Search
 
@@ -52,26 +103,28 @@ Instantly search using:
 - Additional Notes
 - Tasks
 
-## 🎨 User Interface
+Results update in real time.
 
-- Mobile-first responsive design
-- Modern dark theme
-- Bottom navigation
-- Dialog-based workflow
-- Clean and intuitive user experience
-
-## 💾 Storage
-
-- Local Storage persistence
-- Automatic data saving
-- Data remains after browser refresh
-- No account required
+---
 
 ## 📱 Progressive Web App
 
-- Installable on desktop and mobile
-- Offline support
-- Native app-like experience
+- Installable on Desktop
+- Installable on Android
+- Offline Support
+- Native App Experience
+- Responsive Design
+- Fast Loading
+
+---
+
+## 💾 Data Storage
+
+- Local Storage
+- Automatic Saving
+- Persistent Data
+- Works Offline
+- No Account Required
 
 ---
 
@@ -81,15 +134,17 @@ Instantly search using:
 |-----------|-----------|
 | ![](Screenshots/dashboard.png) | ![](Screenshots/add-entry.png) |
 
-
 | Calendar | Search |
 |----------|--------|
 | ![](Screenshots/calendar-ui.png) | ![](Screenshots/search.png) |
 
+| Pending Tasks | Notifications |
+|---------------|---------------|
+| ![](Screenshots/important-tasks.png) | ![](Screenshots/notifications.png) |
 
-  | Important Tasks | 
-  |----------------|
-  | ![](Screenshots/important-tasks.png) | 
+| View Entry | Edit Entry |
+|------------|------------|
+| ![](Screenshots/view-entry.png) | ![](Screenshots/edit-entry.png) |
 
 ---
 
@@ -97,15 +152,15 @@ Instantly search using:
 
 | Technology | Purpose |
 |------------|---------|
-| Next.js | React Framework |
-| React | Frontend |
+| Next.js 16 | React Framework |
+| React | UI Library |
 | TypeScript | Type Safety |
 | Tailwind CSS | Styling |
 | shadcn/ui | UI Components |
 | Zustand | State Management |
-| date-fns | Date Formatting |
+| date-fns | Date Utilities |
 | Lucide React | Icons |
-| PWA | Installable Web Application |
+| PWA | Offline & Installable |
 
 ---
 
@@ -124,107 +179,105 @@ public/
 
 # 🚀 Getting Started
 
-## Clone the repository
+Clone the repository
 
 ```bash
 git clone https://github.com/Vagish23ps/Lectra.git
 ```
 
-## Navigate into the project
+Move into the project
 
 ```bash
 cd Lectra
 ```
 
-## Install dependencies
+Install dependencies
 
 ```bash
 npm install
 ```
 
-## Start the development server
+Run the development server
 
 ```bash
 npm run dev
 ```
 
-Open your browser and visit:
+Visit
 
-```text
+```
 http://localhost:3000
 ```
 
 ---
 
-# 📱 Current Features (v1.0)
+# 📱 Current Features
 
 - Dashboard
+- Daily Timeline
 - Add Entry
-- Edit Entry
 - View Entry
+- Edit Entry
 - Delete Entry
 - Calendar View
 - Smart Search
+- Notification Center
+- Pending Dashboard
+- Deadline Categorization
 - Important Tasks
+- Other Tasks
 - Task Completion
-- Automatic Task Sorting
+- Deep Linking from Dashboard
 - Responsive Design
 - Dark Theme
-- Local Storage Persistence
-- Progressive Web App (PWA)
+- Local Storage
 - Offline Support
-- Installable Application
+- Installable PWA
 
 ---
 
-# 🚧 Roadmap
-
-## Version 1.1
-
-- Push notifications for important tasks
-- Improved task management
-- Better search experience
-- UI refinements
-- Performance optimizations
-- Bug fixes based on user feedback
+# 🚀 Roadmap
 
 ## Version 1.2
 
-- File attachments
-- Image support in notes
-- Rich text editor
-- Improved calendar experience
-- Data export and import
+- File Attachments
+- Image Notes
+- Rich Text Editor
+- Export & Import Data
+- Multiple Themes
+- Better Search Filters
+- Bulk Task Actions
+
+---
 
 ## Version 2.0
 
 - Firebase Cloud Sync
 - Google Authentication
-- Cross-device synchronization
-- AI-powered study assistant
-- Smart note summaries
-- AI task suggestions
-- Semester productivity insights
-- Advanced analytics dashboard
+- Cross-device Synchronization
+- AI Study Assistant
+- AI Note Summaries
+- AI Task Suggestions
+- Semester Analytics
+- Productivity Insights
+- Backup & Restore
 
 ---
 
 # 🎯 Motivation
 
-Lectra was built to simplify everyday note-taking by combining notes, tasks, and calendar-based organization into one lightweight application.
+Lectra was built to simplify note-taking by bringing notes, tasks, reminders, calendar organization, and productivity tracking into one lightweight application.
 
-Instead of switching between multiple apps for notes, reminders, and planning, Lectra provides a clean, distraction-free workspace where users can capture information quickly and recall it effortlessly whenever they need it.
+Instead of switching between multiple apps, Lectra provides a focused workspace where information can be captured quickly and recalled effortlessly.
 
 ---
 
 # 🤝 Contributing
 
-Contributions, suggestions, and feature ideas are always welcome.
-
-If you'd like to improve Lectra:
+Contributions, suggestions and feature requests are always welcome.
 
 1. Fork the repository
-2. Create a new feature branch
+2. Create a feature branch
 3. Commit your changes
 4. Open a Pull Request
 
@@ -236,21 +289,24 @@ If you'd like to improve Lectra:
 
 Engineering Student
 
-**Branch:** IoT • Cybersecurity • Blockchain
+**Branch:** IoT • Cybersecurity with Blockchain
 
-GitHub:
+GitHub
+
 https://github.com/Vagish23ps
 
 ---
 
 # 📄 License
 
-This project is licensed under the **MIT License**.
+Licensed under the MIT License.
 
-Feel free to use, modify, and learn from this project.
+Feel free to use, modify and learn from this project.
 
 ---
 
-## ⭐ Support
+# ⭐ Support
 
-If you found this project helpful, consider giving it a ⭐ on GitHub. It helps the project reach more people and supports future development.
+If you found Lectra useful, consider giving the repository a ⭐ on GitHub.
+
+Every star helps the project reach more developers and motivates future improvements.
