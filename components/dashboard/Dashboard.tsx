@@ -257,9 +257,7 @@ export default function Dashboard() {
                     <p className="mt-1 text-sm text-muted-foreground">
                       {totalPendingCount === 0
                         ? "No pending work waiting for you"
-                        : `${totalPendingCount} ${
-                            totalPendingCount === 1 ? "task" : "tasks"
-                          } waiting for you`}
+                        : `Tasks waiting for you`}
                     </p>
                   </div>
                 </div>
