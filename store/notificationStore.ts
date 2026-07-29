@@ -1,61 +1,103 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
-import { NotificationItem } from "@/types/notification";
-import { generateNotifications } from "@/lib/notificationGenerator";
-import { useEntryStore } from "@/store/entryStore";
+import { NotificationType } from "@/src/notifications/notificationTypes";
+
+export interface NotificationItem {
+  id: string;
+  type: NotificationType;
+
+  title: string;
+  body: string;
+
+  createdAt: string;
+
+  read: boolean;
+}
 
 interface NotificationStore {
   notifications: NotificationItem[];
 
-  addNotification: (notification: NotificationItem) => void;
+  addNotification: (
+    notification: NotificationItem
+  ) => void;
+
   removeNotification: (id: string) => void;
+
   markAsRead: (id: string) => void;
+
   markAllAsRead: () => void;
+
   clearReadNotifications: () => void;
-  refreshNotifications: () => void;
+
+  clearAllNotifications: () => void;
+
   unreadCount: () => number;
 }
 
-export const useNotificationStore = create<NotificationStore>()((set, get) => ({
-  notifications: [],
+export const useNotificationStore =
+  create<NotificationStore>()(
+    persist(
+      (set, get) => ({
+        notifications: [],
 
-  addNotification: (notification) =>
-    set((state) => ({
-      notifications: [notification, ...state.notifications],
-    })),
+        addNotification: (notification) =>
+          set((state) => ({
+            notifications: [
+              notification,
+              ...state.notifications,
+            ],
+          })),
 
-  removeNotification: (id) =>
-    set((state) => ({
-      notifications: state.notifications.filter((n) => n.id !== id),
-    })),
+        removeNotification: (id) =>
+          set((state) => ({
+            notifications: state.notifications.filter(
+              (notification) => notification.id !== id
+            ),
+          })),
 
-  markAsRead: (id) =>
-    set((state) => ({
-      notifications: state.notifications.map((n) =>
-        n.id === id ? { ...n, read: true } : n
-      ),
-    })),
+        markAsRead: (id) =>
+          set((state) => ({
+            notifications: state.notifications.map(
+              (notification) =>
+                notification.id === id
+                  ? {
+                      ...notification,
+                      read: true,
+                    }
+                  : notification
+            ),
+          })),
 
-  markAllAsRead: () =>
-    set((state) => ({
-      notifications: state.notifications.map((n) => ({
-        ...n,
-        read: true,
-      })),
-    })),
+        markAllAsRead: () =>
+          set((state) => ({
+            notifications: state.notifications.map(
+              (notification) => ({
+                ...notification,
+                read: true,
+              })
+            ),
+          })),
 
-  clearReadNotifications: () =>
-    set((state) => ({
-      notifications: state.notifications.filter((n) => !n.read),
-    })),
+        clearReadNotifications: () =>
+          set((state) => ({
+            notifications: state.notifications.filter(
+              (notification) => !notification.read
+            ),
+          })),
 
-  refreshNotifications: () => {
-    const entries = useEntryStore.getState().entries;
+        clearAllNotifications: () =>
+          set({
+            notifications: [],
+          }),
 
-    set({
-      notifications: generateNotifications(entries),
-    });
-  },
-
-  unreadCount: () => get().notifications.filter((n) => !n.read).length,
-}));
+        unreadCount: () =>
+          get().notifications.filter(
+            (notification) => !notification.read
+          ).length,
+      }),
+      {
+        name: "lectra-notification-history",
+      }
+    )
+  );

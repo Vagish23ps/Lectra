@@ -90,10 +90,18 @@ export default function AddEntryDialog() {
   };
 
   const handleSave = () => {
-    if (!entryName.trim() || !subject.trim()) {
-      alert("Entry Name and Subject / Category are required.");
-      return;
-    }
+   const hasTask = works.some((work) => work.task.trim());
+
+      if (
+        !entryName.trim() &&
+        !subject.trim() &&
+        !lesson.trim() &&
+        !notes.trim() &&
+        !hasTask
+      ) {
+        alert("Please add at least one note, task, or detail.");
+        return;
+      }
 
     const entry: Entry = {
       id: crypto.randomUUID(),

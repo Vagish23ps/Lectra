@@ -2,27 +2,24 @@
 
 import { Bell, Calendar, CheckCircle2, Clock3, FileText, Sun, AlertTriangle } from "lucide-react";
 
-import { NotificationItem } from "@/types/notification";
+import type { NotificationItem } from "@/store/notificationStore";
 
 interface NotificationCardProps {
   notification: NotificationItem;
 }
 
-const iconMap = {
-  deadline: AlertTriangle,
-  upcoming: Calendar,
-  "daily-note": FileText,
-  morning: Sun,
-  evening: Clock3,
-  completed: CheckCircle2,
-  overdue: AlertTriangle,
-  system: Bell,
-};
-
 export default function NotificationCard({
   notification,
 }: NotificationCardProps) {
-  const Icon = iconMap[notification.type];
+  const iconMap = {
+    "daily-reminder": FileText,
+    "deadline-today": AlertTriangle,
+    "deadline-tomorrow": Calendar,
+    overdue: AlertTriangle,
+    "weekly-summary": Bell,
+  } as const;
+
+  const Icon = iconMap[notification.type] ?? Bell;
 
   return (
     <div
@@ -45,7 +42,7 @@ export default function NotificationCard({
         </h4>
 
         <p className="mt-1 text-sm text-muted-foreground">
-          {notification.message}
+          {notification.body}
         </p>
 
         <p className="mt-2 text-xs text-muted-foreground">

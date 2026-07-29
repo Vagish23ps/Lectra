@@ -8,6 +8,7 @@ import {
   ClipboardList,
   ChevronRight,
   ListTodo,
+  Settings,
 } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,6 +19,7 @@ import EntryCard from "./EntryCard";
 import NotificationBell from "@/components/notifications/NotificationBell";
 import NotificationPanel from "@/components/notifications/NotificationPanel";
 import { useNotificationStore } from "@/store/notificationStore";
+import { usePendingTasks } from "@/hooks/usePendingTasks";
 
 export default function Dashboard() {
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
@@ -25,14 +27,11 @@ export default function Dashboard() {
 
   const router = useRouter();
   const entries = useEntryStore((state) => state.entries);
-  const refreshNotifications = useNotificationStore(
-    (state) => state.refreshNotifications
-  );
 
   useEffect(() => {
-    setCurrentDate(new Date());
-    refreshNotifications();
-  }, [refreshNotifications]);
+  setCurrentDate(new Date());
+
+  }, []);
 
   const today = currentDate
     ? format(currentDate, "EEEE, dd MMMM yyyy")
@@ -47,53 +46,14 @@ export default function Dashboard() {
           format(currentDate, "yyyy-MM-dd")
       )
     : [];
-
-  const todayDate = new Date();
-  todayDate.setHours(0, 0, 0, 0);
-
-  let overdueCount = 0;
-  let dueTodayCount = 0;
-  let tomorrowCount = 0;
-  let remainingCount = 0;
-  let otherTasksCount = 0;
-
-  entries.forEach((entry) => {
-    entry.works.forEach((work) => {
-      if (work.completed) return;
-
-      // Normal task (not marked important)
-      if (!work.addToPending) {
-        otherTasksCount++;
-        return;
-      }
-
-      // Important task but no deadline set
-      if (!work.deadline) {
-        otherTasksCount++;
-        return;
-      }
-
-      const deadline = new Date(`${work.deadline}T00:00:00`);
-      deadline.setHours(0, 0, 0, 0);
-
-      const diffDays = Math.floor(
-        (deadline.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24)
-      );
-
-      if (diffDays < 0) {
-        overdueCount++;
-      } else if (diffDays === 0) {
-        dueTodayCount++;
-      } else if (diffDays === 1) {
-        tomorrowCount++;
-      } else {
-        remainingCount++;
-      }
-    });
-  });
-
-  const totalPendingCount =
-    overdueCount + dueTodayCount + tomorrowCount + remainingCount + otherTasksCount;
+  const {
+  overdueCount,
+  dueTodayCount,
+  tomorrowCount,
+  remainingCount,
+  otherTasksCount,
+  totalPendingCount,
+} = usePendingTasks();
 
   const pendingCards = [
   {
@@ -123,7 +83,7 @@ export default function Dashboard() {
   {
     title: "Remaining",
     count: remainingCount,
-    href: "/pending?tab=important",
+    href: "/pending?tab=important&section=remaining",
     className:
       "border-border bg-background/60 hover:border-primary/40",
     textClass: "text-foreground",
@@ -131,7 +91,7 @@ export default function Dashboard() {
   {
     title: "Other Tasks",
     count: otherTasksCount,
-    href: "/pending?tab=other",
+    href: "/pending?tab=other&section=other",
     className:
       "border-border bg-background/60 hover:border-primary/40",
     textClass: "text-foreground",
@@ -160,7 +120,17 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <NotificationBell onClick={() => setNotificationOpen(true)} />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => router.push("/settings")}
+              className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-secondary"
+              aria-label="Settings"
+            >
+              <Settings className="h-5 w-5 text-foreground" />
+            </button>
+
+            <NotificationBell onClick={() => setNotificationOpen(true)} />
+          </div>
         </header>
 
         {/* Greeting */}
@@ -256,8 +226,10 @@ export default function Dashboard() {
 
                     <p className="mt-1 text-sm text-muted-foreground">
                       {totalPendingCount === 0
-                        ? "No pending work waiting for you"
-                        : `Tasks waiting for you`}
+                        ? "No pending tasks"
+                        : `${totalPendingCount} Pending ${
+                            totalPendingCount === 1 ? "Task" : "Tasks"
+                          }`}
                     </p>
                   </div>
                 </div>

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Lectra</string>
+    <string name="title_activity_main">Lectra</string>
+    <string name="package_name">com.lectra.app</string>
+    <string name="custom_url_scheme">com.lectra.app</string>
+</resources>

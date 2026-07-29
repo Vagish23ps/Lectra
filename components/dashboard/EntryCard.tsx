@@ -44,7 +44,7 @@ export default function EntryCard({ entry }: EntryCardProps) {
 
   const handleDelete = () => {
     const confirmed = window.confirm(
-      `Delete "${entry.entryName}"? This action cannot be undone.`
+      `Delete "${entry.entryName || "Untitled Entry"}"? This action cannot be undone.`
     );
 
     if (!confirmed) return;
@@ -66,12 +66,12 @@ export default function EntryCard({ entry }: EntryCardProps) {
                 </span>
 
                 <span className="truncate">
-                  {entry.entryName}
+                  {entry.entryName || "Untitled Entry" }
                 </span>
               </h2>
 
               <p className="mt-2 text-sm font-medium text-primary">
-                {entry.subject}
+                {entry.subject || "No subject"}
               </p>
             </div>
 

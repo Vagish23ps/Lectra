@@ -1,7 +1,7 @@
 "use client";
 
 import { Bell } from "lucide-react";
-
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useNotificationStore } from "@/store/notificationStore";
 
@@ -15,7 +15,11 @@ export default function NotificationBell({
   const unreadCount = useNotificationStore((state) =>
     state.unreadCount()
   );
+const [mounted, setMounted] = useState(false);
 
+useEffect(() => {
+  setMounted(true);
+}, []);
   return (
     <Button
       variant="ghost"
@@ -25,7 +29,7 @@ export default function NotificationBell({
     >
       <Bell className="h-6 w-6" strokeWidth={2.5}/>
 
-      {unreadCount > 0 && (
+      {mounted && unreadCount > 0 &&(
         <span
           className="
             absolute

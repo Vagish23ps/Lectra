@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import BottomNav from "@/components/shared/BottomNav";
+import NotificationProvider from "@/src/notifications/provider";
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
@@ -47,6 +48,8 @@ export default function RootLayout({
       )}
     >
       <body className="min-h-full flex flex-col">
+        <NotificationProvider />
+
         <div className="flex-1 pb-24">
           {children}
         </div>

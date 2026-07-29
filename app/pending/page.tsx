@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   CalendarDays,
@@ -16,6 +16,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import ViewEntryDialog from "@/components/dialogs/ViewEntryDialog";
 import { useEntryStore } from "@/store/entryStore";
 import { Entry } from "@/types/entry";
+import { usePendingTasks } from "@/hooks/usePendingTasks";
 
 type PendingWorkItem = {
   work: Entry["works"][number];
@@ -26,8 +27,10 @@ type PendingWorkItem = {
   hasDeadline: boolean;
 };
 
-export default function PendingPage() {
+function PendingPageContent()  {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
   const entries = useEntryStore((state) => state.entries);
   const updateEntry = useEntryStore((state) => state.updateEntry);
 
@@ -35,88 +38,72 @@ export default function PendingPage() {
   const [openView, setOpenView] = useState(false);
   const [activeTab, setActiveTab] = useState<"important" | "other">("important");
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const overdueRef = useRef<HTMLDivElement>(null);
+  const todayRef = useRef<HTMLDivElement>(null);
+  const tomorrowRef = useRef<HTMLDivElement>(null);
+  const remainingRef = useRef<HTMLDivElement>(null);
+  const otherRef = useRef<HTMLDivElement>(null);
 
-  const pendingWorks: PendingWorkItem[] = entries
-    .flatMap((entry) =>
-      entry.works
-        .filter(
-          (work) =>
-            work.addToPending &&
-            !work.completed &&
-            work.task.trim() !== ""
-        )
-        .map((work) => {
-          const deadlineDate = work.deadline
-            ? new Date(`${work.deadline}T00:00:00`)
-            : null;
+  const {
+    overdueTasks,
+    dueTodayTasks,
+    tomorrowTasks,
+    remainingTasks,
+    otherImportantTasks,
+    normalTasks,
+    overdueCount,
+    dueTodayCount,
+    tomorrowCount,
+    remainingCount,
+    otherTasksCount,
+    totalPendingCount,
+  } = usePendingTasks();
 
-          if (deadlineDate) {
-            deadlineDate.setHours(0, 0, 0, 0);
-          }
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    const section = searchParams.get("section");
 
-          const diffDays =
-            deadlineDate !== null
-              ? Math.floor(
-                  (deadlineDate.getTime() - today.getTime()) /
-                    (1000 * 60 * 60 * 24)
-                )
-              : null;
+    if (tab === "important" || tab === "other") {
+      setActiveTab(tab);
+    }
 
-          return {
-            work,
-            entry,
-            hasDeadline: deadlineDate !== null,
-            isOverdue: diffDays !== null && diffDays < 0,
-            isDueToday: diffDays === 0,
-            isDueTomorrow: diffDays === 1,
-          };
-        })
-    )
-    .sort((a, b) => {
-      const aDeadline = a.work.deadline
-        ? new Date(`${a.work.deadline}T00:00:00`).getTime()
-        : Number.MAX_SAFE_INTEGER;
+    const timer = window.setTimeout(() => {
+      switch (section) {
+        case "overdue":
+          overdueRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+          break;
+        case "today":
+          todayRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+          break;
+        case "tomorrow":
+          tomorrowRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+          break;
+        case "remaining":
+          remainingRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+          break;
+        case "other":
+          otherRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+          break;
+      }
+    }, 100);
 
-      const bDeadline = b.work.deadline
-        ? new Date(`${b.work.deadline}T00:00:00`).getTime()
-        : Number.MAX_SAFE_INTEGER;
-
-      return aDeadline - bDeadline;
-    });
-
-  const overdueTasks = pendingWorks.filter((item) => item.isOverdue);
-
-const dueTodayTasks = pendingWorks.filter((item) => item.isDueToday);
-
-const tomorrowTasks = pendingWorks.filter((item) => item.isDueTomorrow);
-
-const remainingTasks = pendingWorks.filter(
-  (item) =>
-    item.hasDeadline &&
-    !item.isOverdue &&
-    !item.isDueToday &&
-    !item.isDueTomorrow
-);
-
-const otherImportantTasks = pendingWorks.filter(
-  (item) => !item.hasDeadline
-);
-
-  const normalTasks = entries.flatMap((entry) =>
-    entry.works
-      .filter(
-        (work) =>
-          !work.addToPending &&
-          !work.completed &&
-          work.task.trim() !== ""
-      )
-      .map((work) => ({
-        work,
-        entry,
-      }))
-  );
+    return () => window.clearTimeout(timer);
+  }, [searchParams]);
 
   const completeWork = (entryId: string, workId: string) => {
     const entry = entries.find((item) => item.id === entryId);
@@ -180,20 +167,16 @@ const otherImportantTasks = pendingWorks.filter(
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="break-words text-base font-semibold">
-                {work.task}
-              </p>
+              <p className="break-words text-base font-semibold">{work.task}</p>
 
               <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                 <span className="rounded-full bg-primary/10 px-2.5 py-1 font-medium text-primary">
-                  {entry.subject}
+                  {entry.subject || "No subject"}
                 </span>
 
                 <span className="text-muted-foreground">•</span>
 
-                <span className="text-muted-foreground">
-                  {entry.entryName}
-                </span>
+                <span className="text-muted-foreground">{entry.entryName || "Untitled Entry"}</span>
               </div>
             </div>
 
@@ -202,7 +185,9 @@ const otherImportantTasks = pendingWorks.filter(
 
           <div className="mt-5 space-y-2 border-t border-border pt-4">
             {work.deadline ? (
-              <div className={`flex items-center gap-2 text-sm ${deadlineTextClass}`}>
+              <div
+                className={`flex items-center gap-2 text-sm ${deadlineTextClass}`}
+              >
                 <CalendarDays className="h-4 w-4 shrink-0" />
                 <span>
                   Due{" "}
@@ -254,7 +239,6 @@ const otherImportantTasks = pendingWorks.filter(
   return (
     <main className="min-h-screen bg-background px-5 pb-28 pt-7 text-foreground">
       <div className="mx-auto w-full max-w-4xl">
-        {/* Header */}
         <header className="flex items-start gap-4">
           <Button
             variant="outline"
@@ -267,29 +251,24 @@ const otherImportantTasks = pendingWorks.filter(
           </Button>
 
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-bold tracking-tight">
-              Pending List
-            </h1>
+            <h1 className="text-2xl font-bold tracking-tight">Pending List</h1>
 
             <p className="mt-1 text-sm text-muted-foreground">
-              {overdueTasks.length + dueTodayTasks.length + tomorrowTasks.length + remainingTasks.length === 0
+              {totalPendingCount === 0
                 ? "Nothing waiting for you"
-                : `${overdueTasks.length + dueTodayTasks.length + tomorrowTasks.length + remainingTasks.length} ${
-                    overdueTasks.length + dueTodayTasks.length + tomorrowTasks.length + remainingTasks.length === 1
-                      ? "task"
-                      : "tasks"
+                : `${totalPendingCount} ${
+                    totalPendingCount === 1 ? "task" : "tasks"
                   } waiting for you`}
             </p>
           </div>
 
-          {(overdueTasks.length + dueTodayTasks.length + tomorrowTasks.length + remainingTasks.length) > 0 && (
+          {totalPendingCount > 0 && (
             <div className="flex h-10 min-w-10 items-center justify-center rounded-full bg-amber-500/10 px-3 text-sm font-semibold text-amber-400">
-              {overdueTasks.length + dueTodayTasks.length + tomorrowTasks.length + remainingTasks.length}
+              {totalPendingCount}
             </div>
           )}
         </header>
 
-        {/* Tabs */}
         <div className="mt-6 grid grid-cols-2 gap-3">
           <button
             type="button"
@@ -316,24 +295,17 @@ const otherImportantTasks = pendingWorks.filter(
           </button>
         </div>
 
-        {/* Empty State */}
-        {overdueTasks.length === 0 &&
-        dueTodayTasks.length === 0 &&
-        tomorrowTasks.length === 0 &&
-        remainingTasks.length === 0 ? (
+        {totalPendingCount === 0 ? (
           <Card className="mt-10 rounded-3xl border-border bg-card">
             <CardContent className="flex flex-col items-center px-6 py-14 text-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-green-500/10">
                 <CheckCircle2 className="h-8 w-8 text-green-400" />
               </div>
 
-              <h2 className="mt-5 text-xl font-semibold">
-                You're all caught up
-              </h2>
+              <h2 className="mt-5 text-xl font-semibold">You're all caught up</h2>
 
               <p className="mt-2 max-w-xs text-sm text-muted-foreground">
-                No pending tasks right now. Enjoy the suspiciously peaceful
-                moment 🎉
+                No pending tasks right now. Enjoy the suspiciously peaceful moment 🎉
               </p>
             </CardContent>
           </Card>
@@ -341,87 +313,107 @@ const otherImportantTasks = pendingWorks.filter(
           <div className="mt-8">
             {activeTab === "important" ? (
               <section className="space-y-8">
-                <div>
+                <div ref={overdueRef}>
                   <div className="mb-3 flex items-center justify-between">
-                    <h2 className="text-lg font-semibold tracking-tight">
-                      Important Tasks
+                    <h2 className="text-lg font-semibold tracking-tight text-red-400">
+                      🔴 Overdue
                     </h2>
-                    <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                      {overdueTasks.length + dueTodayTasks.length + tomorrowTasks.length + remainingTasks.length}
+                    <span className="rounded-full bg-red-500/10 px-3 py-1 text-xs font-semibold text-red-400">
+                      {overdueCount}
                     </span>
                   </div>
 
-                  {overdueTasks.length === 0 &&
-                   dueTodayTasks.length === 0 &&
-                   tomorrowTasks.length === 0 &&
-                   remainingTasks.length === 0 ? (
+                  {overdueTasks.length === 0 ? (
                     <Card className="rounded-3xl border-border bg-card">
                       <CardContent className="px-6 py-8 text-sm text-muted-foreground">
-                        No important tasks with deadlines right now.
+                        No overdue tasks 🎉
                       </CardContent>
                     </Card>
                   ) : (
-                    <div className="space-y-8">
-  {overdueTasks.length > 0 && (
-    <div>
-      <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-red-400">
-        🔴 Overdue
-      </h3>
+                    <div className="space-y-4">
+                      {overdueTasks.map((item) => renderTaskCard(item))}
+                    </div>
+                  )}
+                </div>
 
-      <div className="space-y-4">
-        {overdueTasks.map(renderTaskCard)}
-      </div>
-    </div>
-  )}
+                <div ref={todayRef}>
+                  <div className="mb-3 flex items-center justify-between">
+                    <h2 className="text-lg font-semibold tracking-tight text-orange-400">
+                      🟠 Due Today
+                    </h2>
+                    <span className="rounded-full bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-400">
+                      {dueTodayCount}
+                    </span>
+                  </div>
 
-  {dueTodayTasks.length > 0 && (
-    <div>
-      <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-orange-400">
-        🟠 Due Today
-      </h3>
+                  {dueTodayTasks.length === 0 ? (
+                    <Card className="rounded-3xl border-border bg-card">
+                      <CardContent className="px-6 py-8 text-sm text-muted-foreground">
+                        Nothing due today.
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="space-y-4">
+                      {dueTodayTasks.map((item) => renderTaskCard(item))}
+                    </div>
+                  )}
+                </div>
 
-      <div className="space-y-4">
-        {dueTodayTasks.map(renderTaskCard)}
-      </div>
-    </div>
-  )}
+                <div ref={tomorrowRef}>
+                  <div className="mb-3 flex items-center justify-between">
+                    <h2 className="text-lg font-semibold tracking-tight text-yellow-400">
+                      🟡 Tomorrow
+                    </h2>
+                    <span className="rounded-full bg-yellow-500/10 px-3 py-1 text-xs font-semibold text-yellow-400">
+                      {tomorrowCount}
+                    </span>
+                  </div>
 
-  {tomorrowTasks.length > 0 && (
-    <div>
-      <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-yellow-400">
-        🟡 Tomorrow
-      </h3>
+                  {tomorrowTasks.length === 0 ? (
+                    <Card className="rounded-3xl border-border bg-card">
+                      <CardContent className="px-6 py-8 text-sm text-muted-foreground">
+                        Nothing scheduled for tomorrow.
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="space-y-4">
+                      {tomorrowTasks.map((item) => renderTaskCard(item))}
+                    </div>
+                  )}
+                </div>
 
-      <div className="space-y-4">
-        {tomorrowTasks.map(renderTaskCard)}
-      </div>
-    </div>
-  )}
+                <div ref={remainingRef}>
+                  <div className="mb-3 flex items-center justify-between">
+                    <h2 className="text-lg font-semibold tracking-tight text-blue-400">
+                      🔵 Remaining
+                    </h2>
+                    <span className="rounded-full bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-400">
+                      {remainingCount}
+                    </span>
+                  </div>
 
-  {remainingTasks.length > 0 && (
-    <div>
-      <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-blue-400">
-        🔵 Remaining
-      </h3>
-
-      <div className="space-y-4">
-        {remainingTasks.map(renderTaskCard)}
-      </div>
-    </div>
-  )}
-</div>
+                  {remainingTasks.length === 0 ? (
+                    <Card className="rounded-3xl border-border bg-card">
+                      <CardContent className="px-6 py-8 text-sm text-muted-foreground">
+                        No remaining scheduled tasks.
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="space-y-4">
+                      {remainingTasks.map((item) => renderTaskCard(item))}
+                    </div>
                   )}
                 </div>
               </section>
             ) : (
               <section className="space-y-8">
-                <div>
+                <div ref={otherRef}>
                   <div className="mb-3 flex items-center justify-between">
                     <h2 className="text-lg font-semibold tracking-tight">
                       Other Tasks
                     </h2>
                     <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-secondary-foreground">
-                      {otherImportantTasks.length + normalTasks.length}
+                      {otherTasksCount}
                     </span>
                   </div>
 
@@ -470,13 +462,13 @@ const otherImportantTasks = pendingWorks.filter(
 
                                           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                                             <span className="rounded-full bg-primary/10 px-2.5 py-1 font-medium text-primary">
-                                              {entry.subject}
+                                              {entry.subject || "No subject"}
                                             </span>
 
                                             <span className="text-muted-foreground">•</span>
 
                                             <span className="text-muted-foreground">
-                                              {entry.entryName}
+                                              {entry.entryName || "Untitled Entry"}
                                             </span>
                                           </div>
                                         </div>
@@ -558,13 +550,13 @@ const otherImportantTasks = pendingWorks.filter(
 
                                         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                                           <span className="rounded-full bg-primary/10 px-2.5 py-1 font-medium text-primary">
-                                            {entry.subject}
+                                            {entry.subject || "No subject"}
                                           </span>
 
                                           <span className="text-muted-foreground">•</span>
 
                                           <span className="text-muted-foreground">
-                                            {entry.entryName}
+                                            {entry.entryName || "Untitled Entry"}
                                           </span>
                                         </div>
                                       </div>
@@ -619,7 +611,6 @@ const otherImportantTasks = pendingWorks.filter(
           </div>
         )}
 
-        {/* View Dialog */}
         <ViewEntryDialog
           open={openView}
           onOpenChange={setOpenView}
@@ -627,5 +618,13 @@ const otherImportantTasks = pendingWorks.filter(
         />
       </div>
     </main>
+  );
+}
+
+export default function PendingPage() {
+  return (
+    <Suspense fallback={null}>
+      <PendingPageContent />
+    </Suspense>
   );
 }

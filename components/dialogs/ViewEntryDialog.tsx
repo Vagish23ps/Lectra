@@ -82,14 +82,14 @@ export default function ViewEntryDialog({
 
             <div className="min-w-0 flex-1">
               <DialogTitle className="text-xl font-semibold leading-7 tracking-tight text-foreground">
-                {entry.entryName}
+                {entry.entryName || "Untitled Entry"}
               </DialogTitle>
 
               <div className="mt-2 flex items-center gap-1.5 text-sm font-medium text-primary">
                 <Tag className="h-3.5 w-3.5" />
 
                 <span className="break-words">
-                  {entry.subject}
+                  {entry.subject || "No subject"}
                 </span>
               </div>
             </div>
@@ -213,8 +213,14 @@ export default function ViewEntryDialog({
                           {work.completed
                             ? "Completed"
                             : `Deadline: ${
-                                work.deadline || "Not set"
-                              }`}
+                              work.deadline
+                                ? new Date(work.deadline).toLocaleDateString("en-IN", {
+                                    day: "numeric",
+                                    month: "short",
+                                    year: "numeric",
+                                  })
+                                : "Not set"
+                            }`}
                         </span>
                       </div>
                     )}
