@@ -25,6 +25,8 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { Entry, WorkItem } from "@/types/entry";
 import { useEntryStore } from "@/store/entryStore";
+import { motion } from "framer-motion";
+import { listVariants, itemVariants } from "@/lib/animations";
 
 const createEmptyWork = (): WorkItem => ({
   id: crypto.randomUUID(),
@@ -44,27 +46,20 @@ export default function AddEntryDialog() {
   const [lesson, setLesson] = useState("");
   const [notes, setNotes] = useState("");
 
-  const [works, setWorks] = useState<WorkItem[]>([
-    createEmptyWork(),
-  ]);
+  const [works, setWorks] = useState<WorkItem[]>([]);
 
   const addWork = () => {
-    setWorks((prev) => [
-      ...prev,
-      createEmptyWork(),
-    ]);
+    setWorks((prev) => [...prev, createEmptyWork()]);
   };
 
   const removeWork = (id: string) => {
-    setWorks((prev) =>
-      prev.filter((work) => work.id !== id)
-    );
+    setWorks((prev) => prev.filter((work) => work.id !== id));
   };
 
   const updateWork = (
     id: string,
     field: keyof WorkItem,
-    value: string | boolean
+    value: string | boolean,
   ) => {
     setWorks((prev) =>
       prev.map((work) =>
@@ -73,8 +68,8 @@ export default function AddEntryDialog() {
               ...work,
               [field]: value,
             }
-          : work
-      )
+          : work,
+      ),
     );
   };
 
@@ -84,24 +79,22 @@ export default function AddEntryDialog() {
     setLesson("");
     setNotes("");
 
-    setWorks([
-      createEmptyWork(),
-    ]);
+    setWorks([]);
   };
 
   const handleSave = () => {
-   const hasTask = works.some((work) => work.task.trim());
+    const hasTask = works.some((work) => work.task.trim());
 
-      if (
-        !entryName.trim() &&
-        !subject.trim() &&
-        !lesson.trim() &&
-        !notes.trim() &&
-        !hasTask
-      ) {
-        alert("Please add at least one note, task, or detail.");
-        return;
-      }
+    if (
+      !entryName.trim() &&
+      !subject.trim() &&
+      !lesson.trim() &&
+      !notes.trim() &&
+      !hasTask
+    ) {
+      alert("Please add at least one note, task, or detail.");
+      return;
+    }
 
     const entry: Entry = {
       id: crypto.randomUUID(),
@@ -121,12 +114,9 @@ export default function AddEntryDialog() {
   };
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={setOpen}
-    >
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="h-14 w-full rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 transition hover:bg-primary/90">
+        <Button className="h-14 w-full rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90">
           <Plus className="mr-2 h-5 w-5" />
           Add Entry
         </Button>
@@ -147,10 +137,15 @@ export default function AddEntryDialog() {
 
         {/* Form */}
 
-        <div className="space-y-6 px-5 pb-5">
+        <motion.div
+          className="space-y-6 px-5 pb-5"
+          variants={listVariants}
+          initial="hidden"
+          animate="visible"
+        >
           {/* Entry Details */}
 
-          <section className="space-y-4">
+          <motion.section variants={itemVariants} className="space-y-4">
             <div>
               <label className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
                 <FileText className="h-4 w-4 text-muted-foreground" />
@@ -192,11 +187,14 @@ export default function AddEntryDialog() {
                 className="min-h-28 resize-none rounded-xl bg-background"
               />
             </div>
-          </section>
+          </motion.section>
 
           {/* Tasks */}
 
-          <section className="border-t border-border pt-5">
+          <motion.section
+            variants={itemVariants}
+            className="border-t border-border pt-5"
+          >
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
                 <h3 className="flex items-center gap-2 font-semibold text-foreground">
@@ -208,7 +206,6 @@ export default function AddEntryDialog() {
                   Add actions related to this entry.
                 </p>
               </div>
-
               <Button
                 type="button"
                 size="sm"
@@ -223,8 +220,10 @@ export default function AddEntryDialog() {
 
             <div className="space-y-3">
               {works.map((work, index) => (
-                <div
+                <motion.div
                   key={work.id}
+                  layout
+                  variants={itemVariants}
                   className="rounded-2xl border border-border bg-background/60 p-4"
                 >
                   <div className="mb-3 flex items-center justify-between gap-3">
@@ -232,29 +231,23 @@ export default function AddEntryDialog() {
                       Task {index + 1}
                     </p>
 
-                    {works.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                        onClick={() => removeWork(work.id)}
-                        aria-label={`Remove task ${index + 1}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => removeWork(work.id)}
+                      aria-label={`Remove task ${index + 1}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
 
                   <Input
                     placeholder="What needs to be done?"
                     value={work.task}
                     onChange={(e) =>
-                      updateWork(
-                        work.id,
-                        "task",
-                        e.target.value
-                      )
+                      updateWork(work.id, "task", e.target.value)
                     }
                     className="h-11 rounded-xl bg-card"
                   />
@@ -264,11 +257,7 @@ export default function AddEntryDialog() {
                       type="checkbox"
                       checked={work.addToPending}
                       onChange={(e) =>
-                        updateWork(
-                          work.id,
-                          "addToPending",
-                          e.target.checked
-                        )
+                        updateWork(work.id, "addToPending", e.target.checked)
                       }
                       className="h-4 w-4 accent-primary"
                     />
@@ -282,9 +271,7 @@ export default function AddEntryDialog() {
                     <div className="mt-4 space-y-2">
                       <label className="flex items-center gap-2 text-sm font-medium text-foreground">
                         <CalendarDays className="h-4 w-4 text-muted-foreground" />
-
                         Deadline
-
                         <span className="font-normal text-muted-foreground">
                           (Optional)
                         </span>
@@ -294,24 +281,23 @@ export default function AddEntryDialog() {
                         type="date"
                         value={work.deadline}
                         onChange={(e) =>
-                          updateWork(
-                            work.id,
-                            "deadline",
-                            e.target.value
-                          )
+                          updateWork(work.id, "deadline", e.target.value)
                         }
                         className="h-11 rounded-xl bg-card"
                       />
                     </div>
                   )}
-                </div>
+                </motion.div>
               ))}
             </div>
-          </section>
+          </motion.section>
 
           {/* Additional Notes */}
 
-          <section className="border-t border-border pt-5">
+          <motion.section
+            variants={itemVariants}
+            className="border-t border-border pt-5"
+          >
             <label className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
               <StickyNote className="h-4 w-4 text-muted-foreground" />
               Additional Notes
@@ -323,7 +309,7 @@ export default function AddEntryDialog() {
               onChange={(e) => setNotes(e.target.value)}
               className="min-h-24 resize-none rounded-xl bg-background"
             />
-          </section>
+          </motion.section>
 
           {/* Actions */}
 
@@ -345,7 +331,7 @@ export default function AddEntryDialog() {
               Save Entry
             </Button>
           </div>
-        </div>
+        </motion.div>
       </DialogContent>
     </Dialog>
   );

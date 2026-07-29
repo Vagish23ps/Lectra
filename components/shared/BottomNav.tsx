@@ -1,16 +1,10 @@
 "use client";
 
-import {
-  Home,
-  CalendarDays,
-  ClipboardList,
-  Search,
-} from "lucide-react";
+import { Home, CalendarDays, ClipboardList, Search } from "lucide-react";
 
-import {
-  usePathname,
-  useRouter,
-} from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import { buttonTap, itemVariants } from "@/lib/animations";
 
 const navItems = [
   {
@@ -48,31 +42,46 @@ export default function BottomNav() {
           const active = pathname === item.path;
 
           return (
-            <button
+            <motion.button
               key={item.path}
+              whileTap={buttonTap}
+              variants={itemVariants}
+              layout
               type="button"
-              onClick={() =>
-                router.push(item.path)
-              }
+              onClick={() => router.push(item.path)}
               className={`group relative flex min-w-16 flex-col items-center justify-center gap-1.5 rounded-2xl px-3 py-2 text-xs font-medium transition-colors ${
                 active
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
               }`}
               aria-label={item.label}
-              aria-current={
-                active ? "page" : undefined
-              }
+              aria-current={active ? "page" : undefined}
             >
               {/* Active Indicator */}
 
               {active && (
-                <span className="absolute -top-2 h-1 w-8 rounded-full bg-primary" />
+                <motion.span
+                  layoutId="active-indicator"
+                  className="absolute -top-2 h-1 w-8 rounded-full bg-primary"
+                  transition={{
+                    type: "spring",
+                    stiffness: 500,
+                    damping: 30,
+                  }}
+                />
               )}
 
               {/* Icon */}
 
-              <div
+              <motion.div
+                animate={{
+                  scale: active ? 1.08 : 1,
+                }}
+                transition={{
+                  type: "spring",
+                  stiffness: 400,
+                  damping: 18,
+                }}
                 className={`flex h-9 w-9 items-center justify-center rounded-xl transition-colors ${
                   active
                     ? "bg-primary/10 text-primary"
@@ -80,14 +89,22 @@ export default function BottomNav() {
                 }`}
               >
                 <Icon className="h-5 w-5" />
-              </div>
+              </motion.div>
 
               {/* Label */}
 
-              <span>
+              <motion.span
+                animate={{
+                  opacity: active ? 1 : 0.75,
+                  y: active ? 0 : 2,
+                }}
+                transition={{
+                  duration: 0.2,
+                }}
+              >
                 {item.label}
-              </span>
-            </button>
+              </motion.span>
+            </motion.button>
           );
         })}
       </div>

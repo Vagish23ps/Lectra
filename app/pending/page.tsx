@@ -17,6 +17,8 @@ import ViewEntryDialog from "@/components/dialogs/ViewEntryDialog";
 import { useEntryStore } from "@/store/entryStore";
 import { Entry } from "@/types/entry";
 import { usePendingTasks } from "@/hooks/usePendingTasks";
+import { motion, AnimatePresence } from "framer-motion";
+import { pageVariants, itemVariants, listVariants } from "@/lib/animations";
 
 type PendingWorkItem = {
   work: Entry["works"][number];
@@ -27,7 +29,7 @@ type PendingWorkItem = {
   hasDeadline: boolean;
 };
 
-function PendingPageContent()  {
+function PendingPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -36,7 +38,9 @@ function PendingPageContent()  {
 
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [openView, setOpenView] = useState(false);
-  const [activeTab, setActiveTab] = useState<"important" | "other">("important");
+  const [activeTab, setActiveTab] = useState<"important" | "other">(
+    "important",
+  );
 
   const overdueRef = useRef<HTMLDivElement>(null);
   const todayRef = useRef<HTMLDivElement>(null);
@@ -112,7 +116,7 @@ function PendingPageContent()  {
     const updatedEntry: Entry = {
       ...entry,
       works: entry.works.map((work) =>
-        work.id === workId ? { ...work, completed: true } : work
+        work.id === workId ? { ...work, completed: true } : work,
       ),
     };
 
@@ -125,26 +129,26 @@ function PendingPageContent()  {
     const borderClass = isOverdue
       ? "border-2 border-red-500"
       : isDueToday
-      ? "border-2 border-orange-500"
-      : isDueTomorrow
-      ? "border-2 border-yellow-500"
-      : "border border-border";
+        ? "border-2 border-orange-500"
+        : isDueTomorrow
+          ? "border-2 border-yellow-500"
+          : "border border-border";
 
     const iconClass = isOverdue
       ? "bg-red-500/10 text-red-400"
       : isDueToday
-      ? "bg-orange-500/10 text-orange-400"
-      : isDueTomorrow
-      ? "bg-yellow-500/10 text-yellow-400"
-      : "bg-amber-500/10 text-amber-400";
+        ? "bg-orange-500/10 text-orange-400"
+        : isDueTomorrow
+          ? "bg-yellow-500/10 text-yellow-400"
+          : "bg-amber-500/10 text-amber-400";
 
     const deadlineTextClass = isOverdue
       ? "text-red-400"
       : isDueToday
-      ? "text-orange-400"
-      : isDueTomorrow
-      ? "text-yellow-400"
-      : "text-amber-400";
+        ? "text-orange-400"
+        : isDueTomorrow
+          ? "text-yellow-400"
+          : "text-amber-400";
 
     return (
       <Card
@@ -176,7 +180,9 @@ function PendingPageContent()  {
 
                 <span className="text-muted-foreground">•</span>
 
-                <span className="text-muted-foreground">{entry.entryName || "Untitled Entry"}</span>
+                <span className="text-muted-foreground">
+                  {entry.entryName || "Untitled Entry"}
+                </span>
               </div>
             </div>
 
@@ -197,7 +203,7 @@ function PendingPageContent()  {
                       day: "numeric",
                       month: "short",
                       year: "numeric",
-                    }
+                    },
                   )}
                 </span>
               </div>
@@ -236,8 +242,92 @@ function PendingPageContent()  {
     );
   };
 
+  const renderSimpleTaskCard = (
+    work: Entry["works"][number],
+    entry: Entry,
+    important: boolean,
+  ) => {
+    return (
+      <Card className="overflow-hidden rounded-3xl border border-border bg-card transition-all hover:border-primary/50">
+        <CardContent className="p-5">
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedEntry(entry);
+              setOpenView(true);
+            }}
+            className="group flex w-full items-start gap-3 rounded-xl p-2 text-left transition-colors hover:bg-muted/40"
+          >
+            <div
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                important
+                  ? "bg-amber-500/10 text-amber-400"
+                  : "bg-muted text-muted-foreground"
+              }`}
+            >
+              <ListTodo className="h-5 w-5" />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <p className="break-words text-base font-semibold">{work.task}</p>
+
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                <span className="rounded-full bg-primary/10 px-2.5 py-1 font-medium text-primary">
+                  {entry.subject || "No subject"}
+                </span>
+
+                <span className="text-muted-foreground">•</span>
+
+                <span className="text-muted-foreground">
+                  {entry.entryName || "Untitled Entry"}
+                </span>
+              </div>
+            </div>
+
+            <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1" />
+          </button>
+
+          <div className="mt-5 space-y-2 border-t border-border pt-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Clock3 className="h-4 w-4 shrink-0" />
+              <span>No deadline set</span>
+            </div>
+
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Clock3 className="h-4 w-4 shrink-0" />
+              <span>
+                Created{" "}
+                {new Date(entry.createdAt).toLocaleString(undefined, {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                  hour12: true,
+                })}
+              </span>
+            </div>
+          </div>
+
+          <Button
+            className="mt-5 h-11 w-full rounded-xl"
+            onClick={() => completeWork(entry.id, work.id)}
+          >
+            <CheckCircle2 className="mr-2 h-4 w-4" />
+            Mark as Completed
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
-    <main className="min-h-screen bg-background px-5 pb-28 pt-7 text-foreground">
+    <motion.main
+      className="min-h-screen bg-background px-5 pb-28 pt-7 text-foreground"
+      variants={pageVariants}
+      initial="hidden"
+      animate="visible"
+    >
       <div className="mx-auto w-full max-w-4xl">
         <header className="flex items-start gap-4">
           <Button
@@ -302,10 +392,13 @@ function PendingPageContent()  {
                 <CheckCircle2 className="h-8 w-8 text-green-400" />
               </div>
 
-              <h2 className="mt-5 text-xl font-semibold">You're all caught up</h2>
+              <h2 className="mt-5 text-xl font-semibold">
+                You're all caught up
+              </h2>
 
               <p className="mt-2 max-w-xs text-sm text-muted-foreground">
-                No pending tasks right now. Enjoy the suspiciously peaceful moment 🎉
+                No pending tasks right now. Enjoy the suspiciously peaceful
+                moment 🎉
               </p>
             </CardContent>
           </Card>
@@ -330,9 +423,22 @@ function PendingPageContent()  {
                       </CardContent>
                     </Card>
                   ) : (
-                    <div className="space-y-4">
-                      {overdueTasks.map((item) => renderTaskCard(item))}
-                    </div>
+                    <motion.div className="space-y-4" variants={listVariants}>
+                      <AnimatePresence mode="popLayout">
+                        {overdueTasks.map((item) => (
+                          <motion.div
+                            key={item.work.id}
+                            layout
+                            variants={itemVariants}
+                            initial="hidden"
+                            animate="visible"
+                            exit="exit"
+                          >
+                            {renderTaskCard(item)}
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
+                    </motion.div>
                   )}
                 </div>
 
@@ -353,9 +459,22 @@ function PendingPageContent()  {
                       </CardContent>
                     </Card>
                   ) : (
-                    <div className="space-y-4">
-                      {dueTodayTasks.map((item) => renderTaskCard(item))}
-                    </div>
+                    <motion.div className="space-y-4" variants={listVariants}>
+                      <AnimatePresence mode="popLayout">
+                        {dueTodayTasks.map((item) => (
+                          <motion.div
+                            key={item.work.id}
+                            layout
+                            variants={itemVariants}
+                            initial="hidden"
+                            animate="visible"
+                            exit="exit"
+                          >
+                            {renderTaskCard(item)}
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
+                    </motion.div>
                   )}
                 </div>
 
@@ -376,9 +495,22 @@ function PendingPageContent()  {
                       </CardContent>
                     </Card>
                   ) : (
-                    <div className="space-y-4">
-                      {tomorrowTasks.map((item) => renderTaskCard(item))}
-                    </div>
+                    <motion.div className="space-y-4" variants={listVariants}>
+                      <AnimatePresence mode="popLayout">
+                        {tomorrowTasks.map((item) => (
+                          <motion.div
+                            key={item.work.id}
+                            layout
+                            variants={itemVariants}
+                            initial="hidden"
+                            animate="visible"
+                            exit="exit"
+                          >
+                            {renderTaskCard(item)}
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
+                    </motion.div>
                   )}
                 </div>
 
@@ -399,9 +531,22 @@ function PendingPageContent()  {
                       </CardContent>
                     </Card>
                   ) : (
-                    <div className="space-y-4">
-                      {remainingTasks.map((item) => renderTaskCard(item))}
-                    </div>
+                    <motion.div className="space-y-4" variants={listVariants}>
+                      <AnimatePresence mode="popLayout">
+                        {remainingTasks.map((item) => (
+                          <motion.div
+                            key={item.work.id}
+                            layout
+                            variants={itemVariants}
+                            initial="hidden"
+                            animate="visible"
+                            exit="exit"
+                          >
+                            {renderTaskCard(item)}
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
+                    </motion.div>
                   )}
                 </div>
               </section>
@@ -433,86 +578,25 @@ function PendingPageContent()  {
                               Important Tasks without Deadline
                             </h3>
 
-                            <div className="mt-4 space-y-4">
-                              {otherImportantTasks.map((item) => {
-                                const { work, entry } = item;
-
-                                return (
-                                  <Card
+                            <motion.div
+                              className="mt-4 space-y-4"
+                              variants={listVariants}
+                            >
+                              <AnimatePresence mode="popLayout">
+                                {otherImportantTasks.map(({ work, entry }) => (
+                                  <motion.div
                                     key={work.id}
-                                    className="overflow-hidden rounded-3xl border border-border bg-card transition-all hover:border-primary/50"
+                                    layout
+                                    variants={itemVariants}
+                                    initial="hidden"
+                                    animate="visible"
+                                    exit="exit"
                                   >
-                                    <CardContent className="p-5">
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setSelectedEntry(entry);
-                                          setOpenView(true);
-                                        }}
-                                        className="group flex w-full items-start gap-3 rounded-xl p-2 text-left transition-colors hover:bg-muted/40"
-                                      >
-                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400">
-                                          <ListTodo className="h-5 w-5" />
-                                        </div>
-
-                                        <div className="min-w-0 flex-1">
-                                          <p className="break-words text-base font-semibold">
-                                            {work.task}
-                                          </p>
-
-                                          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                                            <span className="rounded-full bg-primary/10 px-2.5 py-1 font-medium text-primary">
-                                              {entry.subject || "No subject"}
-                                            </span>
-
-                                            <span className="text-muted-foreground">•</span>
-
-                                            <span className="text-muted-foreground">
-                                              {entry.entryName || "Untitled Entry"}
-                                            </span>
-                                          </div>
-                                        </div>
-
-                                        <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1" />
-                                      </button>
-
-                                      <div className="mt-5 space-y-2 border-t border-border pt-4">
-                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                          <Clock3 className="h-4 w-4 shrink-0" />
-                                          <span>No deadline set</span>
-                                        </div>
-
-                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                          <Clock3 className="h-4 w-4 shrink-0" />
-                                          <span>
-                                            Created{" "}
-                                            {new Date(entry.createdAt).toLocaleString(
-                                              undefined,
-                                              {
-                                                day: "numeric",
-                                                month: "short",
-                                                year: "numeric",
-                                                hour: "numeric",
-                                                minute: "2-digit",
-                                                hour12: true,
-                                              }
-                                            )}
-                                          </span>
-                                        </div>
-                                      </div>
-
-                                      <Button
-                                        className="mt-5 h-11 w-full rounded-xl"
-                                        onClick={() => completeWork(entry.id, work.id)}
-                                      >
-                                        <CheckCircle2 className="mr-2 h-4 w-4" />
-                                        Mark as Completed
-                                      </Button>
-                                    </CardContent>
-                                  </Card>
-                                );
-                              })}
-                            </div>
+                                    {renderSimpleTaskCard(work, entry, true)}
+                                  </motion.div>
+                                ))}
+                              </AnimatePresence>
+                            </motion.div>
                           </CardContent>
                         </Card>
                       )}
@@ -524,82 +608,25 @@ function PendingPageContent()  {
                               Normal Tasks
                             </h3>
 
-                            <div className="mt-4 space-y-4">
-                              {normalTasks.map(({ work, entry }) => (
-                                <Card
-                                  key={work.id}
-                                  className="overflow-hidden rounded-3xl border border-border bg-card transition-all hover:border-primary/50"
-                                >
-                                  <CardContent className="p-5">
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setSelectedEntry(entry);
-                                        setOpenView(true);
-                                      }}
-                                      className="group flex w-full items-start gap-3 rounded-xl p-2 text-left transition-colors hover:bg-muted/40"
-                                    >
-                                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-                                        <ListTodo className="h-5 w-5" />
-                                      </div>
-
-                                      <div className="min-w-0 flex-1">
-                                        <p className="break-words text-base font-semibold">
-                                          {work.task}
-                                        </p>
-
-                                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                                          <span className="rounded-full bg-primary/10 px-2.5 py-1 font-medium text-primary">
-                                            {entry.subject || "No subject"}
-                                          </span>
-
-                                          <span className="text-muted-foreground">•</span>
-
-                                          <span className="text-muted-foreground">
-                                            {entry.entryName || "Untitled Entry"}
-                                          </span>
-                                        </div>
-                                      </div>
-
-                                      <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1" />
-                                    </button>
-
-                                    <div className="mt-5 space-y-2 border-t border-border pt-4">
-                                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                        <Clock3 className="h-4 w-4 shrink-0" />
-                                        <span>No deadline set</span>
-                                      </div>
-
-                                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                        <Clock3 className="h-4 w-4 shrink-0" />
-                                        <span>
-                                          Created{" "}
-                                          {new Date(entry.createdAt).toLocaleString(
-                                            undefined,
-                                            {
-                                              day: "numeric",
-                                              month: "short",
-                                              year: "numeric",
-                                              hour: "numeric",
-                                              minute: "2-digit",
-                                              hour12: true,
-                                            }
-                                          )}
-                                        </span>
-                                      </div>
-                                    </div>
-
-                                    <Button
-                                      className="mt-5 h-11 w-full rounded-xl"
-                                      onClick={() => completeWork(entry.id, work.id)}
-                                    >
-                                      <CheckCircle2 className="mr-2 h-4 w-4" />
-                                      Mark as Completed
-                                    </Button>
-                                  </CardContent>
-                                </Card>
-                              ))}
-                            </div>
+                            <motion.div
+                              className="mt-4 space-y-4"
+                              variants={listVariants}
+                            >
+                              <AnimatePresence mode="popLayout">
+                                {normalTasks.map(({ work, entry }) => (
+                                  <motion.div
+                                    key={work.id}
+                                    layout
+                                    variants={itemVariants}
+                                    initial="hidden"
+                                    animate="visible"
+                                    exit="exit"
+                                  >
+                                    {renderSimpleTaskCard(work, entry, false)}
+                                  </motion.div>
+                                ))}
+                              </AnimatePresence>
+                            </motion.div>
                           </CardContent>
                         </Card>
                       )}
@@ -617,7 +644,7 @@ function PendingPageContent()  {
           entry={selectedEntry}
         />
       </div>
-    </main>
+    </motion.main>
   );
 }
 

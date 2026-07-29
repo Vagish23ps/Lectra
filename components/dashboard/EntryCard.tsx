@@ -31,20 +31,27 @@ export default function EntryCard({ entry }: EntryCardProps) {
   const deleteEntry = useEntryStore((state) => state.deleteEntry);
 
   const assignedCount = entry.works.filter(
-    (work) => work.task.trim() !== ""
+    (work) => work.task.trim() !== "",
   ).length;
 
-  const completedCount = entry.works.filter(
-    (work) => work.completed
-  ).length;
+  const completedCount = entry.works.filter((work) => work.completed).length;
 
   const pendingCount = entry.works.filter(
-    (work) => work.addToPending && !work.completed
+    (work) => work.addToPending && !work.completed,
   ).length;
+
+  const createdDateTime = new Date(entry.createdAt).toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
 
   const handleDelete = () => {
     const confirmed = window.confirm(
-      `Delete "${entry.entryName || "Untitled Entry"}"? This action cannot be undone.`
+      `Delete "${entry.entryName || "Untitled Entry"}"? This action cannot be undone.`,
     );
 
     if (!confirmed) return;
@@ -66,7 +73,7 @@ export default function EntryCard({ entry }: EntryCardProps) {
                 </span>
 
                 <span className="truncate">
-                  {entry.entryName || "Untitled Entry" }
+                  {entry.entryName || "Untitled Entry"}
                 </span>
               </h2>
 
@@ -82,8 +89,7 @@ export default function EntryCard({ entry }: EntryCardProps) {
                 <ListTodo className="h-3.5 w-3.5" />
 
                 <span>
-                  {assignedCount}{" "}
-                  {assignedCount === 1 ? "Task" : "Tasks"}
+                  {assignedCount} {assignedCount === 1 ? "Task" : "Tasks"}
                 </span>
               </div>
             </div>
@@ -97,9 +103,7 @@ export default function EntryCard({ entry }: EntryCardProps) {
                 <div className="flex items-center gap-1.5 rounded-full bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-400">
                   <CheckCircle2 className="h-3.5 w-3.5" />
 
-                  <span>
-                    {completedCount} Completed
-                  </span>
+                  <span>{completedCount} Completed</span>
                 </div>
               )}
 
@@ -107,9 +111,7 @@ export default function EntryCard({ entry }: EntryCardProps) {
                 <div className="flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-400">
                   <Clock3 className="h-3.5 w-3.5" />
 
-                  <span>
-                    {pendingCount} Important
-                  </span>
+                  <span>{pendingCount} Important</span>
                 </div>
               )}
             </div>
@@ -118,9 +120,13 @@ export default function EntryCard({ entry }: EntryCardProps) {
           {/* Key Notes */}
 
           <div className="mt-5 border-t border-border pt-4">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Key Notes
-            </p>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Key Notes
+              </p>
+
+              <p className="text-xs text-muted-foreground">{createdDateTime}</p>
+            </div>
 
             {entry.lesson.trim() ? (
               <p className="line-clamp-3 text-sm leading-6 text-foreground/90">

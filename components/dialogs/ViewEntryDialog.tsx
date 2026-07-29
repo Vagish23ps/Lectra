@@ -20,6 +20,9 @@ import {
 
 import { Entry } from "@/types/entry";
 import { useEntryStore } from "@/store/entryStore";
+import { motion } from "framer-motion";
+
+import { listVariants, itemVariants } from "@/lib/animations";
 
 interface ViewEntryDialogProps {
   open: boolean;
@@ -45,7 +48,7 @@ export default function ViewEntryDialog({
               ...work,
               completed: !work.completed,
             }
-          : work
+          : work,
       ),
     };
 
@@ -54,23 +57,16 @@ export default function ViewEntryDialog({
 
   if (!entry) return null;
 
-  const validWorks = entry.works.filter(
-    (work) => work.task.trim() !== ""
-  );
+  const validWorks = entry.works.filter((work) => work.task.trim() !== "");
 
-  const completedCount = validWorks.filter(
-    (work) => work.completed
-  ).length;
+  const completedCount = validWorks.filter((work) => work.completed).length;
 
   const pendingCount = validWorks.filter(
-    (work) => work.addToPending && !work.completed
+    (work) => work.addToPending && !work.completed,
   ).length;
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={onOpenChange}
-    >
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto border-border bg-popover p-0 sm:max-w-lg">
         {/* Header */}
 
@@ -98,16 +94,19 @@ export default function ViewEntryDialog({
 
         {/* Entry Content */}
 
-        <div className="space-y-6 px-5 pb-5">
+        <motion.div
+          className="space-y-6 px-5 pb-5"
+          variants={listVariants}
+          initial="hidden"
+          animate="visible"
+        >
           {/* Key Notes */}
 
-          <section>
+          <motion.section variants={itemVariants}>
             <div className="mb-3 flex items-center gap-2">
               <StickyNote className="h-4 w-4 text-primary" />
 
-              <h3 className="font-semibold text-foreground">
-                Key Notes
-              </h3>
+              <h3 className="font-semibold text-foreground">Key Notes</h3>
             </div>
 
             <div className="rounded-2xl border border-border bg-background/60 p-4">
@@ -121,19 +120,20 @@ export default function ViewEntryDialog({
                 </p>
               )}
             </div>
-          </section>
+          </motion.section>
 
           {/* Tasks */}
 
-          <section className="border-t border-border pt-5">
+          <motion.section
+            variants={itemVariants}
+            className="border-t border-border pt-5"
+          >
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2">
                   <ListTodo className="h-4 w-4 text-primary" />
 
-                  <h3 className="font-semibold text-foreground">
-                    Tasks
-                  </h3>
+                  <h3 className="font-semibold text-foreground">Tasks</h3>
                 </div>
 
                 {validWorks.length > 0 && (
@@ -161,8 +161,16 @@ export default function ViewEntryDialog({
             ) : (
               <div className="mt-4 space-y-3">
                 {validWorks.map((work) => (
-                  <div
+                  <motion.div
                     key={work.id}
+                    layout
+                    variants={itemVariants}
+                    animate={{
+                      scale: work.completed ? 0.995 : 1,
+                    }}
+                    transition={{
+                      duration: 0.2,
+                    }}
                     className={`rounded-2xl border p-4 transition-colors ${
                       work.completed
                         ? "border-green-500/20 bg-green-500/5"
@@ -171,18 +179,28 @@ export default function ViewEntryDialog({
                   >
                     <button
                       type="button"
-                      onClick={() =>
-                        toggleWorkCompleted(work.id)
-                      }
+                      onClick={() => toggleWorkCompleted(work.id)}
                       className="flex w-full items-start gap-3 text-left"
                     >
-                      {work.completed ? (
-                        <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-400" />
-                      ) : (
-                        <Circle className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
-                      )}
-
-                      <span
+                      <motion.div
+                        animate={{
+                          scale: work.completed ? [1, 1.25, 1] : 1,
+                          rotate: work.completed ? [0, 10, -10, 0] : 0,
+                        }}
+                        transition={{ duration: 0.35 }}
+                      >
+                        {work.completed ? (
+                          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-400" />
+                        ) : (
+                          <Circle className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
+                        )}
+                      </motion.div>
+                      <motion.span
+                        animate={{
+                          opacity: work.completed ? 0.65 : 1,
+                          scale: work.completed ? 0.98 : 1,
+                        }}
+                        transition={{ duration: 0.2 }}
                         className={`min-w-0 flex-1 text-sm leading-6 ${
                           work.completed
                             ? "text-muted-foreground line-through"
@@ -190,56 +208,58 @@ export default function ViewEntryDialog({
                         }`}
                       >
                         {work.task}
-                      </span>
+                      </motion.span>
                     </button>
 
                     {work.addToPending && (
                       <div className="mt-3 flex items-center gap-2 border-t border-border/70 pt-3 text-xs">
                         <Clock3
                           className={`h-3.5 w-3.5 ${
-                            work.completed
-                              ? "text-green-400"
-                              : "text-amber-400"
+                            work.completed ? "text-green-400" : "text-amber-400"
                           }`}
                         />
 
                         <span
                           className={
-                            work.completed
-                              ? "text-green-400"
-                              : "text-amber-400"
+                            work.completed ? "text-green-400" : "text-amber-400"
                           }
                         >
                           {work.completed
                             ? "Completed"
                             : `Deadline: ${
-                              work.deadline
-                                ? new Date(work.deadline).toLocaleDateString("en-IN", {
-                                    day: "numeric",
-                                    month: "short",
-                                    year: "numeric",
-                                  })
-                                : "Not set"
-                            }`}
+                                work.deadline
+                                  ? new Date(work.deadline).toLocaleDateString(
+                                      "en-IN",
+                                      {
+                                        day: "numeric",
+                                        month: "short",
+                                        year: "numeric",
+                                      },
+                                    )
+                                  : "Not set"
+                              }`}
                         </span>
                       </div>
                     )}
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             )}
 
             {pendingCount > 0 && (
               <p className="mt-3 text-xs text-amber-400">
-                {pendingCount}{" "}
-                {pendingCount === 1 ? "task is" : "tasks are"} still pending.
+                {pendingCount} {pendingCount === 1 ? "task is" : "tasks are"}{" "}
+                still pending.
               </p>
             )}
-          </section>
+          </motion.section>
 
           {/* Additional Notes */}
 
-          <section className="border-t border-border pt-5">
+          <motion.section
+            variants={itemVariants}
+            className="border-t border-border pt-5"
+          >
             <div className="mb-3 flex items-center gap-2">
               <StickyNote className="h-4 w-4 text-primary" />
 
@@ -259,7 +279,7 @@ export default function ViewEntryDialog({
                 </p>
               )}
             </div>
-          </section>
+          </motion.section>
 
           {/* Created Date */}
 
@@ -268,9 +288,7 @@ export default function ViewEntryDialog({
               <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" />
 
               <div>
-                <p className="text-xs text-muted-foreground">
-                  Created
-                </p>
+                <p className="text-xs text-muted-foreground">Created</p>
 
                 <p className="mt-2 text-muted-foreground">
                   {new Date(entry.createdAt).toLocaleString("en-IN", {
@@ -286,7 +304,7 @@ export default function ViewEntryDialog({
               </div>
             </div>
           </section>
-        </div>
+        </motion.div>
       </DialogContent>
     </Dialog>
   );

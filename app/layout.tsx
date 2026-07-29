@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import BottomNav from "@/components/shared/BottomNav";
 import NotificationProvider from "@/src/notifications/provider";
 
-const inter = Inter({subsets:['latin'],variable:'--font-sans'});
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -44,15 +44,13 @@ export default function RootLayout({
         geistSans.variable,
         geistMono.variable,
         inter.variable,
-        "font-sans"
+        "font-sans",
       )}
     >
       <body className="min-h-full flex flex-col">
         <NotificationProvider />
 
-        <div className="flex-1 pb-24">
-          {children}
-        </div>
+        <div className="flex-1 pb-24">{children}</div>
 
         <BottomNav />
       </body>

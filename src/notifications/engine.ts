@@ -52,7 +52,7 @@ export function generateNotifications(
     notifications.push({
       id: "overdue",
       type: "overdue",
-      title: " ‼️ Overdue Tasks",
+      title: "🔴 Overdue Tasks",
       body: `You have ${overdueTasks.length} overdue task${
         overdueTasks.length > 1 ? "s" : ""
       }.`,
