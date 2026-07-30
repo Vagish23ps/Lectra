@@ -3,6 +3,7 @@
 ![Next.js](https://img.shields.io/badge/Next.js-16-black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue)
 ![PWA](https://img.shields.io/badge/PWA-Installable-success)
+![Android](https://img.shields.io/badge/Android-APK%20Testing-orange)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 ## 🚀 Live Demo
@@ -110,7 +111,8 @@ Results update in real time.
 ## 📱 Progressive Web App
 
 - Installable on Desktop
-- Installable on Android
+- Installable on Android (PWA)
+- Native Android APK testing
 - Offline Support
 - Native App Experience
 - Responsive Design
@@ -173,140 +175,4 @@ store/
 types/
 lib/
 public/
-```
-
----
-
-# 🚀 Getting Started
-
-Clone the repository
-
-```bash
-git clone https://github.com/Vagish23ps/Lectra.git
-```
-
-Move into the project
-
-```bash
-cd Lectra
-```
-
-Install dependencies
-
-```bash
-npm install
-```
-
-Run the development server
-
-```bash
-npm run dev
-```
-
-Visit
-
-```
-http://localhost:3000
-```
-
----
-
-# 📱 Current Features
-
-- Dashboard
-- Daily Timeline
-- Add Entry
-- View Entry
-- Edit Entry
-- Delete Entry
-- Calendar View
-- Smart Search
-- Notification Center
-- Pending Dashboard
-- Deadline Categorization
-- Important Tasks
-- Other Tasks
-- Task Completion
-- Deep Linking from Dashboard
-- Responsive Design
-- Dark Theme
-- Local Storage
-- Offline Support
-- Installable PWA
-
----
-
-# 🚀 Roadmap
-
-## Version 1.2
-
-- File Attachments
-- Image Notes
-- Rich Text Editor
-- Export & Import Data
-- Multiple Themes
-- Better Search Filters
-- Bulk Task Actions
-
----
-
-## Version 2.0
-
-- Firebase Cloud Sync
-- Google Authentication
-- Cross-device Synchronization
-- AI Study Assistant
-- AI Note Summaries
-- AI Task Suggestions
-- Semester Analytics
-- Productivity Insights
-- Backup & Restore
-
----
-
-# 🎯 Motivation
-
-Lectra was built to simplify note-taking by bringing notes, tasks, reminders, calendar organization, and productivity tracking into one lightweight application.
-
-Instead of switching between multiple apps, Lectra provides a focused workspace where information can be captured quickly and recalled effortlessly.
-
----
-
-# 🤝 Contributing
-
-Contributions, suggestions and feature requests are always welcome.
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Open a Pull Request
-
----
-
-# 👨‍💻 Developer
-
-**Vagish**
-
-Engineering Student
-
-**Branch:** IoT • Cybersecurity with Blockchain
-
-GitHub
-
-https://github.com/Vagish23ps
-
----
-
-# 📄 License
-
-Licensed under the MIT License.
-
-Feel free to use, modify and learn from this project.
-
----
-
-# ⭐ Support
-
-If you found Lectra useful, consider giving the repository a ⭐ on GitHub.
-
-Every star helps the project reach more developers and motivates future improvements.
+android/
