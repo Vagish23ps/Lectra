@@ -39,3 +39,20 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# VS Code
+.vscode/
+
+# Android Studio
+.idea/
+android/.idea/
+
+# Android build
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+
+# Signing keys
+*.jks
+*.keystore
