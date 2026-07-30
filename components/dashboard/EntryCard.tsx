@@ -19,6 +19,7 @@ import EditEntryDialog from "@/components/dialogs/EditEntryDialog";
 
 import { Entry } from "@/types/entry";
 import { useEntryStore } from "@/store/entryStore";
+import { toast } from "sonner";
 
 interface EntryCardProps {
   entry: Entry;
@@ -57,6 +58,7 @@ export default function EntryCard({ entry }: EntryCardProps) {
     if (!confirmed) return;
 
     deleteEntry(entry.id);
+    toast.success("Entry deleted.");
   };
 
   return (

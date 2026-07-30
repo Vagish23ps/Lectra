@@ -4,6 +4,7 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import BottomNav from "@/components/shared/BottomNav";
 import NotificationProvider from "@/src/notifications/provider";
+import { Sonner } from "@/components/ui/sonner";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -51,6 +52,8 @@ export default function RootLayout({
         <NotificationProvider />
 
         <div className="flex-1 pb-24">{children}</div>
+
+        <Sonner />
 
         <BottomNav />
       </body>

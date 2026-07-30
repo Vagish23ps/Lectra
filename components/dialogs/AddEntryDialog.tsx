@@ -22,7 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-
+import { toast } from "sonner";
 import { Entry, WorkItem } from "@/types/entry";
 import { useEntryStore } from "@/store/entryStore";
 import { motion } from "framer-motion";
@@ -92,7 +92,7 @@ export default function AddEntryDialog() {
       !notes.trim() &&
       !hasTask
     ) {
-      alert("Please add at least one note, task, or detail.");
+      toast.error("Please add at least one note, task, or detail.");
       return;
     }
 
@@ -107,6 +107,7 @@ export default function AddEntryDialog() {
     };
 
     addEntry(entry);
+    toast.success("Entry created successfully.");
 
     resetForm();
 

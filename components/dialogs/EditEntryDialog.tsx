@@ -21,13 +21,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-
+import { toast } from "sonner";
 import { Entry, WorkItem } from "@/types/entry";
 import { useEntryStore } from "@/store/entryStore";
 import { motion } from "framer-motion";
-
 import { listVariants, itemVariants } from "@/lib/animations";
-
+import { Sonner } from "../ui/sonner";
 interface EditEntryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -101,7 +100,7 @@ export default function EditEntryDialog({
       !notes.trim() &&
       !hasTask
     ) {
-      alert("Please add at least one note, task, or detail.");
+      toast.error("Please add at least one note, task, or detail.");
       return;
     }
 
@@ -115,6 +114,7 @@ export default function EditEntryDialog({
     };
 
     updateEntry(updatedEntry);
+    toast.success("Changes saved.");
     onOpenChange(false);
   };
 
