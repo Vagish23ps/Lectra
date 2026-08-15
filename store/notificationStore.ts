@@ -43,12 +43,39 @@ export const useNotificationStore =
 
         addNotification: (notification) =>
           set((state) => {
-            const exists = state.notifications.some(
-              (n) => n.id === notification.id
+            const existingIndex = state.notifications.findIndex(
+              (n) =>
+                n.id === notification.id ||
+                (n.title === notification.title &&
+                  n.body.replace(/\. Deadline:.*$/, "") ===
+                    notification.body.replace(/\. Deadline:.*$/, ""))
             );
-            if (exists) {
-              return state;
+
+            if (existingIndex !== -1) {
+              const existing = state.notifications[existingIndex];
+              // Exact duplicate (same id, title, body, read, and type)
+              if (
+                existing.id === notification.id &&
+                existing.title === notification.title &&
+                existing.body === notification.body &&
+                existing.read === notification.read &&
+                existing.type === notification.type
+              ) {
+                return state;
+              }
+
+              // Update existing notification with new body / title / type / id / read status
+              const updated = [...state.notifications];
+              updated[existingIndex] = {
+                ...existing,
+                ...notification,
+                id: notification.id,
+              };
+              return {
+                notifications: updated,
+              };
             }
+
             return {
               notifications: [
                 notification,

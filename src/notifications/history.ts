@@ -17,10 +17,25 @@ export function recordNotificationToHistory(
 
   const extra = payload.extra as LectraNotification | undefined;
 
-  const id = String(extra?.id ?? payload.id ?? `notif-${Date.now()}`);
-  const type = (extra?.type ?? payload.type ?? "daily-reminder") as NotificationType;
   const title = extra?.title ?? payload.title ?? "Notification";
   const body = extra?.body ?? payload.body ?? "";
+
+  let type: NotificationType = "daily-reminder";
+  if (extra?.type) {
+    type = extra.type;
+  } else if (payload.type) {
+    type = payload.type;
+  } else if (title.includes("Overdue")) {
+    type = "overdue";
+  } else if (title.includes("Due Today")) {
+    type = "deadline-today";
+  } else if (title.includes("Due Tomorrow")) {
+    type = "deadline-tomorrow";
+  } else if (title.includes("Weekly")) {
+    type = "weekly-summary";
+  }
+
+  const id = String(extra?.id ?? payload.id ?? `notif-${Date.now()}`);
 
   let createdAt: string;
   if (extra?.createdAt) {

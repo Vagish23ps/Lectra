@@ -1,6 +1,13 @@
 import { Entry } from "@/types/entry";
 import { LectraNotification } from "./notificationTypes";
 import { useNotificationSettingsStore } from "@/store/notificationSettingsStore";
+import { format } from "date-fns";
+
+function formatDeadline(dateString: string): string {
+  const [year, month, day] = dateString.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  return format(date, "d MMM yyyy");
+}
 
 function createScheduledDate(
   dateString: string,
@@ -47,7 +54,7 @@ export function generateNotifications(
       if (!work.addToPending || !work.deadline) return;
 
       pendingTasks++;
-
+      const formattedDeadline = formatDeadline(work.deadline);
 
       // Due Tomorrow
       if (settings.dueTomorrowReminder) {
@@ -62,7 +69,7 @@ export function generateNotifications(
             id: `deadline-tomorrow-${work.id}`,
             type: "deadline-tomorrow",
             title: "⏰ Due Tomorrow",
-            body: `"${work.task}" is due tomorrow.`,
+            body: `"${work.task}" is due tomorrow. Deadline: ${formattedDeadline}`,
             scheduledAt,
             priority: "normal",
             entryId: entry.id,
@@ -86,7 +93,7 @@ export function generateNotifications(
             id: `deadline-today-${work.id}`,
             type: "deadline-today",
             title: "📅 Due Today",
-            body: `"${work.task}" is due today.`,
+            body: `"${work.task}" is due today. Deadline: ${formattedDeadline}`,
             scheduledAt,
             priority: "high",
             entryId: entry.id,
@@ -99,25 +106,33 @@ export function generateNotifications(
 
       // Overdue
       if (settings.overdueReminder) {
-        const scheduledAt = createScheduledDate(
-          work.deadline,
-          settings.overdueReminderTime,
-          1
-        ).getTime();
+        const [dYear, dMonth, dDay] = work.deadline.split("-").map(Number);
+        const deadlineDate = new Date(dYear, dMonth - 1, dDay, 0, 0, 0, 0);
+        const todayStart = new Date(now);
+        todayStart.setHours(0, 0, 0, 0);
 
-        if (scheduledAt > now) {
-          notifications.push({
-            id: `overdue-${work.id}`,
-            type: "overdue",
-            title: "🔴 Overdue Task",
-            body: `"${work.task}" is overdue.`,
-            scheduledAt,
-            priority: "high",
-            entryId: entry.id,
-            workId: work.id,
-            read: false,
-            createdAt: now,
-          });
+        if (deadlineDate < todayStart) {
+          const [ovHour, ovMinute] = settings.overdueReminderTime
+            .split(":")
+            .map(Number);
+          const scheduledDate = new Date(now);
+          scheduledDate.setHours(ovHour, ovMinute, 0, 0);
+          const scheduledAt = scheduledDate.getTime();
+
+          if (scheduledAt > now) {
+            notifications.push({
+              id: `overdue-${work.id}`,
+              type: "overdue",
+              title: "🔴 Overdue Task",
+              body: `"${work.task}" is overdue. Deadline: ${formattedDeadline}`,
+              scheduledAt,
+              priority: "high",
+              entryId: entry.id,
+              workId: work.id,
+              read: false,
+              createdAt: now,
+            });
+          }
         }
       }
     });
