@@ -1,25 +1,39 @@
 "use client";
 
 import { useEffect } from "react";
-import { notificationWorker } from "./worker";
-import { requestNotificationPermission } from "./permission";
+import { useEntryStore } from "@/store/entryStore";
+import { notificationService } from "./service";
 import { createNotificationChannels } from "./channel";
+import { initializeCapacitorNotificationActions } from "./capacitor";
+import { debugNotificationState } from "./capacitor";
 
 export default function NotificationProvider() {
-  useEffect(() => {
-    async function initializeNotifications() {
-      await requestNotificationPermission();
-      await createNotificationChannels();
+  console.log("🚨 LECTRA PROVIDER MOUNTED");
+  const entries = useEntryStore((state) => state.entries);
+  const hydrated = useEntryStore((state) => state.hydrated);
 
-      notificationWorker.start();
+  useEffect(() => {
+    console.log(
+      "🚨 LECTRA PROVIDER EFFECT => hydrated:",
+      hydrated,
+      "entries:",
+      entries.length,
+    );
+
+    if (!hydrated) return;
+
+    async function initializeNotifications() {
+      console.log("🚨 LECTRA INITIALIZING");
+
+      await createNotificationChannels();
+      await initializeCapacitorNotificationActions();
+      await notificationService.initialize(entries);
+      setTimeout(() => {
+        void debugNotificationState();
+      }, 10_000);
     }
 
-    initializeNotifications();
-
-    return () => {
-      notificationWorker.stop();
-    };
-  }, []);
-
+    void initializeNotifications();
+  }, [hydrated, entries]);
   return null;
 }

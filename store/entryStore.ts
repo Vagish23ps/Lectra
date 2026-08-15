@@ -1,9 +1,13 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { Entry } from "@/types/entry";
+import { notificationService } from "@/src/notifications/service";
 
 interface EntryStore {
   entries: Entry[];
+  hydrated: boolean;
+
+  setHydrated: (value: boolean) => void;
 
   addEntry: (entry: Entry) => void;
   deleteEntry: (id: string) => void;
@@ -12,33 +16,59 @@ interface EntryStore {
 
 export const useEntryStore = create<EntryStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       entries: [],
+      hydrated: false,
 
-      addEntry: (entry) =>
-        set((state) => ({
-          entries: [...state.entries, entry],
-        })),
+      setHydrated: (value) => {
+        set({ hydrated: value });
+      },
 
-      deleteEntry: (id) =>
-        set((state) => ({
-          entries: state.entries.filter(
-            (entry) => entry.id !== id
-          ),
-        })),
+      addEntry: (entry) => {
+        const updatedEntries = [...get().entries, entry];
 
-      updateEntry: (updatedEntry) =>
-        set((state) => ({
-          entries: state.entries.map((entry) =>
-            entry.id === updatedEntry.id
-              ? updatedEntry
-              : entry
-          ),
-        })),
+        set({
+          entries: updatedEntries,
+        });
+
+        void notificationService.refresh(updatedEntries);
+      },
+
+      deleteEntry: (id) => {
+        const updatedEntries = get().entries.filter((entry) => entry.id !== id);
+
+        set({
+          entries: updatedEntries,
+        });
+
+        void notificationService.refresh(updatedEntries);
+      },
+
+      updateEntry: (updatedEntry) => {
+        const updatedEntries = get().entries.map((entry) =>
+          entry.id === updatedEntry.id ? updatedEntry : entry,
+        );
+
+        set({
+          entries: updatedEntries,
+        });
+
+        void notificationService.refresh(updatedEntries);
+      },
     }),
 
     {
       name: "lectra-storage",
-    }
-  )
+
+      onRehydrateStorage: () => {
+        console.log("🚨 ZUSTAND HYDRATION START");
+
+        return (state) => {
+          console.log("🚨 ZUSTAND HYDRATION FINISHED", state?.entries.length);
+
+          state?.setHydrated(true);
+        };
+      },
+    },
+  ),
 );

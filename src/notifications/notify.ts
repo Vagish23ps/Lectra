@@ -1,13 +1,16 @@
 import { Capacitor } from "@capacitor/core";
 import { LectraNotification } from "./notificationTypes";
 import { showBrowserNotification } from "./browser";
-import { showCapacitorNotification } from "./capacitor";
+import { scheduleCapacitorNotification } from "./capacitor";
 
 export async function showNotification(
   notification: LectraNotification
 ): Promise<void> {
   if (Capacitor.isNativePlatform()) {
-    await showCapacitorNotification(notification);
+    await scheduleCapacitorNotification(
+  notification,
+  Math.floor(Date.now() / 1000)
+);
     return;
   }
 
