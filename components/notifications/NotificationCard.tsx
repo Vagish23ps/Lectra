@@ -5,6 +5,7 @@ import { Bell, Calendar, FileText, AlertTriangle } from "lucide-react";
 import { motion } from "framer-motion";
 
 import type { NotificationItem } from "@/store/notificationStore";
+import { useNotificationStore } from "@/store/notificationStore";
 import { format } from "date-fns";
 
 interface NotificationCardProps {
@@ -14,6 +15,8 @@ interface NotificationCardProps {
 export default function NotificationCard({
   notification,
 }: NotificationCardProps) {
+  const markAsRead = useNotificationStore((state) => state.markAsRead);
+
   const iconMap = {
     "daily-reminder": FileText,
     "deadline-today": AlertTriangle,
@@ -26,12 +29,17 @@ export default function NotificationCard({
 
   return (
     <motion.div
+      onClick={() => {
+        if (!notification.read) {
+          markAsRead(notification.id);
+        }
+      }}
       whileHover={{
         y: -2,
         scale: 1.01,
       }}
       className={`
-        flex items-start gap-4 rounded-xl border p-4 transition-all
+        flex items-start gap-4 rounded-xl border p-4 transition-all cursor-pointer
         ${
           notification.read ? "bg-background" : "bg-blue-50 dark:bg-blue-950/30"
         }

@@ -18,7 +18,7 @@ export async function runNotificationScheduler(entries: Entry[]) {
     const { Capacitor } = await import("@capacitor/core");
 
     if (Capacitor.isNativePlatform()) {
-      await reconcileCapacitorNotifications(notifications);
+      await reconcileCapacitorNotifications(notifications, settings);
       return;
     }
   }

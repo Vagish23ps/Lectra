@@ -42,12 +42,20 @@ export const useNotificationStore =
         notifications: [],
 
         addNotification: (notification) =>
-          set((state) => ({
-            notifications: [
-              notification,
-              ...state.notifications,
-            ],
-          })),
+          set((state) => {
+            const exists = state.notifications.some(
+              (n) => n.id === notification.id
+            );
+            if (exists) {
+              return state;
+            }
+            return {
+              notifications: [
+                notification,
+                ...state.notifications,
+              ],
+            };
+          }),
 
         removeNotification: (id) =>
           set((state) => ({
