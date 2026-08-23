@@ -8,7 +8,15 @@ import { reconcileCapacitorNotifications } from "./capacitor";
 export async function runNotificationScheduler(entries: Entry[]) {
   const settings = useNotificationSettingsStore.getState();
 
-  if (!settings.enabled) return;
+  if (!settings.enabled) {
+    if (typeof window !== "undefined") {
+      const { Capacitor } = await import("@capacitor/core");
+      if (Capacitor.isNativePlatform()) {
+        await reconcileCapacitorNotifications([], settings);
+      }
+    }
+    return;
+  }
 
   const generated = generateNotifications(entries);
   const manager = new NotificationManager(generated);

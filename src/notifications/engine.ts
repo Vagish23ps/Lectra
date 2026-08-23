@@ -1,4 +1,5 @@
-import { Entry } from "@/types/entry";
+import { Entry, WorkItem } from "@/types/entry";
+import { CustomReminder } from "@/types/reminder";
 import { LectraNotification } from "./notificationTypes";
 import { useNotificationSettingsStore } from "@/store/notificationSettingsStore";
 import { format } from "date-fns";
@@ -32,6 +33,154 @@ function createScheduledDate(
   return date;
 }
 
+function generateCustomReminderNotifications(
+  reminder: CustomReminder,
+  entry: Entry,
+  work: WorkItem | undefined,
+  now: number
+): LectraNotification[] {
+  if (reminder.enabled === false) return [];
+
+  const notifications: LectraNotification[] = [];
+  const isTask = !!work;
+  const targetId = isTask ? work.id : entry.id;
+  const idPrefix = isTask ? `custom-task` : `custom-entry`;
+  const title = isTask ? "🔔 Task Reminder" : "🔔 Reminder";
+  const body = isTask
+    ? (work.task.trim() || "Task Reminder")
+    : (entry.entryName.trim() || entry.subject.trim() || "Entry Reminder");
+
+  const [hour, minute] = (reminder.time || "09:00").split(":").map(Number);
+
+  if (reminder.type === "one-time") {
+    if (!reminder.date) return [];
+    const [year, month, day] = reminder.date.split("-").map(Number);
+    const scheduledDate = new Date(year, month - 1, day, hour, minute, 0, 0);
+    const scheduledAt = scheduledDate.getTime();
+
+    if (scheduledAt > now) {
+      notifications.push({
+        id: `${idPrefix}-${targetId}`,
+        type: "custom-reminder",
+        title,
+        body,
+        scheduledAt,
+        priority: "normal",
+        entryId: entry.id,
+        workId: isTask ? work.id : undefined,
+        customReminder: reminder,
+        read: false,
+        createdAt: now,
+      });
+    }
+  } else if (reminder.type === "recurring") {
+    const frequency = reminder.recurrence?.frequency || "daily";
+
+    if (frequency === "daily") {
+      const scheduledDate = new Date(now);
+      scheduledDate.setHours(hour, minute, 0, 0);
+      if (scheduledDate.getTime() <= now) {
+        scheduledDate.setDate(scheduledDate.getDate() + 1);
+      }
+      notifications.push({
+        id: `${idPrefix}-daily-${targetId}`,
+        type: "custom-reminder",
+        title,
+        body,
+        scheduledAt: scheduledDate.getTime(),
+        priority: "normal",
+        entryId: entry.id,
+        workId: isTask ? work.id : undefined,
+        customReminder: reminder,
+        read: false,
+        createdAt: now,
+      });
+    } else if (frequency === "weekly") {
+      const targetDay = reminder.recurrence?.daysOfWeek?.[0] ?? 0;
+      const scheduledDate = new Date(now);
+      const currentDay = scheduledDate.getDay();
+      let daysUntil = targetDay - currentDay;
+      if (daysUntil < 0) daysUntil += 7;
+      scheduledDate.setDate(scheduledDate.getDate() + daysUntil);
+      scheduledDate.setHours(hour, minute, 0, 0);
+      if (scheduledDate.getTime() <= now) {
+        scheduledDate.setDate(scheduledDate.getDate() + 7);
+      }
+      notifications.push({
+        id: `${idPrefix}-weekly-${targetId}-${targetDay}`,
+        type: "custom-reminder",
+        title,
+        body,
+        scheduledAt: scheduledDate.getTime(),
+        priority: "normal",
+        entryId: entry.id,
+        workId: isTask ? work.id : undefined,
+        customReminder: reminder,
+        read: false,
+        createdAt: now,
+      });
+    } else if (frequency === "selected-days") {
+      const days =
+        reminder.recurrence?.daysOfWeek && reminder.recurrence.daysOfWeek.length > 0
+          ? reminder.recurrence.daysOfWeek
+          : [0];
+
+      for (const targetDay of days) {
+        const scheduledDate = new Date(now);
+        const currentDay = scheduledDate.getDay();
+        let daysUntil = targetDay - currentDay;
+        if (daysUntil < 0) daysUntil += 7;
+        scheduledDate.setDate(scheduledDate.getDate() + daysUntil);
+        scheduledDate.setHours(hour, minute, 0, 0);
+        if (scheduledDate.getTime() <= now) {
+          scheduledDate.setDate(scheduledDate.getDate() + 7);
+        }
+        notifications.push({
+          id: `${idPrefix}-day-${targetId}-${targetDay}`,
+          type: "custom-reminder",
+          title,
+          body,
+          scheduledAt: scheduledDate.getTime(),
+          priority: "normal",
+          entryId: entry.id,
+          workId: isTask ? work.id : undefined,
+          customReminder: reminder,
+          read: false,
+          createdAt: now,
+        });
+      }
+    } else if (frequency === "monthly") {
+      const targetDayOfMonth = Math.min(
+        Math.max(reminder.recurrence?.dayOfMonth ?? 1, 1),
+        28
+      );
+      const scheduledDate = new Date(now);
+      scheduledDate.setDate(targetDayOfMonth);
+      scheduledDate.setHours(hour, minute, 0, 0);
+      if (scheduledDate.getTime() <= now) {
+        scheduledDate.setMonth(scheduledDate.getMonth() + 1);
+        scheduledDate.setDate(targetDayOfMonth);
+        scheduledDate.setHours(hour, minute, 0, 0);
+      }
+      notifications.push({
+        id: `${idPrefix}-monthly-${targetId}`,
+        type: "custom-reminder",
+        title,
+        body,
+        scheduledAt: scheduledDate.getTime(),
+        priority: "normal",
+        entryId: entry.id,
+        workId: isTask ? work.id : undefined,
+        customReminder: reminder,
+        read: false,
+        createdAt: now,
+      });
+    }
+  }
+
+  return notifications;
+}
+
 export function generateNotifications(
   entries: Entry[]
 ): LectraNotification[] {
@@ -44,8 +193,33 @@ export function generateNotifications(
   let completedTasks = 0;
   let pendingTasks = 0;
 
+  const isCustomRemindersEnabled =
+    settings.customReminders ?? settings.customRemindersEnabled ?? true;
+
   entries.forEach((entry) => {
+    // Custom Reminder for Entry
+    if (isCustomRemindersEnabled && entry.reminder) {
+      const entryReminders = generateCustomReminderNotifications(
+        entry.reminder,
+        entry,
+        undefined,
+        now
+      );
+      notifications.push(...entryReminders);
+    }
+
     entry.works.forEach((work) => {
+      // Custom Reminder for Task
+      if (isCustomRemindersEnabled && !work.completed && work.reminder) {
+        const taskReminders = generateCustomReminderNotifications(
+          work.reminder,
+          entry,
+          work,
+          now
+        );
+        notifications.push(...taskReminders);
+      }
+
       if (work.completed) {
         completedTasks++;
         return;
@@ -57,7 +231,7 @@ export function generateNotifications(
       const formattedDeadline = formatDeadline(work.deadline);
 
       // Due Tomorrow
-      if (settings.dueTomorrowReminder) {
+      if (settings.dueTomorrowReminder ?? settings.dueTomorrowEnabled ?? true) {
         const scheduledAt = createScheduledDate(
           work.deadline,
           settings.dueTomorrowReminderTime,
@@ -81,7 +255,7 @@ export function generateNotifications(
       }
 
       // Due Today
-      if (settings.dueTodayReminder) {
+      if (settings.dueTodayReminder ?? settings.dueTodayEnabled ?? true) {
         const scheduledAt = createScheduledDate(
           work.deadline,
           settings.dueTodayReminderTime,
@@ -105,7 +279,7 @@ export function generateNotifications(
       }
 
       // Overdue
-      if (settings.overdueReminder) {
+      if (settings.overdueReminder ?? settings.overdueEnabled ?? true) {
         const [dYear, dMonth, dDay] = work.deadline.split("-").map(Number);
         const deadlineDate = new Date(dYear, dMonth - 1, dDay, 0, 0, 0, 0);
         const todayStart = new Date(now);
@@ -142,7 +316,7 @@ export function generateNotifications(
   const totalEntries = entries.length;
 
   if (
-    settings.weeklySummary &&
+    (settings.weeklySummary ?? settings.weeklySummaryEnabled ?? true) &&
     (totalEntries > 0 ||
       completedTasks > 0 ||
       pendingTasks > 0)
@@ -184,7 +358,7 @@ export function generateNotifications(
   }
 
   // Daily Reminder
-  if (settings.dailyReminder) {
+  if (settings.dailyReminder ?? settings.dailyReminderEnabled ?? true) {
     const scheduledAt = new Date();
     const [hour, minute] = settings.dailyReminderTime
       .split(":")

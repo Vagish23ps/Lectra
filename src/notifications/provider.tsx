@@ -5,7 +5,6 @@ import { useEntryStore } from "@/store/entryStore";
 import { notificationService } from "./service";
 import { createNotificationChannels } from "./channel";
 import { initializeCapacitorNotificationActions } from "./capacitor";
-import { debugNotificationState } from "./capacitor";
 
 export default function NotificationProvider() {
   const entries = useEntryStore((state) => state.entries);
@@ -21,9 +20,6 @@ export default function NotificationProvider() {
         await createNotificationChannels();
         await initializeCapacitorNotificationActions();
         await notificationService.initialize(entries);
-        setTimeout(() => {
-          void debugNotificationState();
-        }, 10_000);
       } else {
         await notificationService.refresh(entries);
       }

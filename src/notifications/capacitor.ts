@@ -4,6 +4,8 @@ import { handleNotificationClick } from "./actions";
 import { getNotificationNativeId } from "./ids";
 import { recordNotificationToHistory } from "./history";
 import { useNotificationStore } from "@/store/notificationStore";
+import { useEntryStore } from "@/store/entryStore";
+import { Entry } from "@/types/entry";
 
 export interface RecurringNotificationSettings {
   dailyReminderTime: string;   // "HH:MM"
@@ -11,10 +13,39 @@ export interface RecurringNotificationSettings {
   weeklySummaryDay: string;    // JS convention: "0"=Sun … "6"=Sat
 }
 
+export async function registerCapacitorActionTypes() {
+  try {
+    await LocalNotifications.registerActionTypes({
+      types: [
+        {
+          id: "TASK_ACTIONS",
+          actions: [
+            {
+              id: "complete",
+              title: "Complete",
+            },
+            {
+              id: "view",
+              title: "View",
+            },
+          ],
+        },
+      ],
+    });
+  } catch (error) {
+    console.error("Error registering notification action types:", error);
+  }
+}
+
 export async function scheduleCapacitorNotification(
   notification: LectraNotification,
   nativeId: number,
 ) {
+  const isTaskNotification =
+    notification.type === "deadline-today" ||
+    notification.type === "deadline-tomorrow" ||
+    notification.type === "overdue";
+
   await LocalNotifications.schedule({
     notifications: [
       {
@@ -22,6 +53,7 @@ export async function scheduleCapacitorNotification(
         title: notification.title,
         body: notification.body,
         channelId: "lectra-general",
+        actionTypeId: isTaskNotification ? "TASK_ACTIONS" : undefined,
         schedule: {
           at: new Date(notification.scheduledAt),
           allowWhileIdle: true,
@@ -103,36 +135,26 @@ export async function reconcileCapacitorNotifications(
   }
 
   if (staleIds.length > 0) {
-    await LocalNotifications.cancel({
-      notifications: staleIds.map((id) => ({
-        id,
-      })),
-    });
+    await cancelCapacitorNotifications(staleIds);
   }
 
+  // Reschedule all active notifications
   for (const notification of notifications) {
     const nativeId = getNotificationNativeId(notification.id);
-    console.log("🔔 LECTRA SCHEDULING:", {
-      id: notification.id,
-      nativeId,
-      type: notification.type,
-      title: notification.title,
-      body: notification.body,
-      scheduledAt: new Date(notification.scheduledAt).toString(),
-    });
 
-    await LocalNotifications.cancel({
-      notifications: [
-        {
-          id: nativeId,
-        },
-      ],
+    // Cancel existing before re-scheduling to ensure exact update
+    await cancelCapacitorNotification(nativeId);
+
+    console.log("🔔 LECTRA SCHEDULING:", {
+      id: nativeId,
+      type: notification.type,
+      scheduledAt: new Date(notification.scheduledAt).toISOString(),
     });
 
     if (notification.type === "daily-reminder") {
-      const [drHour, drMinute] = settings.dailyReminderTime
-        .split(":")
-        .map(Number);
+      const [hourStr, minuteStr] = settings.dailyReminderTime.split(":");
+      const hour = parseInt(hourStr, 10);
+      const minute = parseInt(minuteStr, 10);
 
       await LocalNotifications.schedule({
         notifications: [
@@ -142,10 +164,10 @@ export async function reconcileCapacitorNotifications(
             body: notification.body,
             channelId: "lectra-general",
             schedule: {
-              // on: cron path → setExactAndAllowWhileIdle(RTC_WAKEUP)
-              // Self-rescheduling: TimedNotificationPublisher re-fires nextTrigger()
-              // after each delivery, advancing DAY_OF_MONTH automatically.
-              on: { hour: drHour, minute: drMinute },
+              on: {
+                hour,
+                minute,
+              },
               allowWhileIdle: true,
             },
             extra: notification,
@@ -157,12 +179,12 @@ export async function reconcileCapacitorNotifications(
     }
 
     if (notification.type === "weekly-summary") {
-      const [wsHour, wsMinute] = settings.weeklySummaryTime
-        .split(":")
-        .map(Number);
-      // JS Date.getDay(): 0=Sun … 6=Sat
-      // Capacitor Weekday:  1=Sun … 7=Sat  → add 1
-      const wsWeekday = (Number(settings.weeklySummaryDay) + 1) as Weekday;
+      const [hourStr, minuteStr] = settings.weeklySummaryTime.split(":");
+      const hour = parseInt(hourStr, 10);
+      const minute = parseInt(minuteStr, 10);
+      const jsWeekday = parseInt(settings.weeklySummaryDay, 10);
+      // Convert JS Sunday=0..Saturday=6 to Capacitor Sunday=1..Saturday=7
+      const capacitorWeekday = ((jsWeekday % 7) + 1) as Weekday;
 
       await LocalNotifications.schedule({
         notifications: [
@@ -172,10 +194,11 @@ export async function reconcileCapacitorNotifications(
             body: notification.body,
             channelId: "lectra-general",
             schedule: {
-              // on: cron path → setExactAndAllowWhileIdle(RTC_WAKEUP)
-              // Self-rescheduling: TimedNotificationPublisher re-fires nextTrigger()
-              // after each delivery, advancing WEEK_OF_MONTH automatically.
-              on: { weekday: wsWeekday, hour: wsHour, minute: wsMinute },
+              on: {
+                weekday: capacitorWeekday,
+                hour,
+                minute,
+              },
               allowWhileIdle: true,
             },
             extra: notification,
@@ -186,6 +209,119 @@ export async function reconcileCapacitorNotifications(
       continue;
     }
 
+    if (notification.type === "custom-reminder") {
+      const reminder = notification.customReminder;
+      const isTask = !!notification.workId;
+
+      if (reminder?.type === "recurring") {
+        const frequency = reminder.recurrence?.frequency || "daily";
+
+        if (frequency === "daily") {
+          const [hourStr, minuteStr] = (reminder.time || "09:00").split(":");
+          const hour = parseInt(hourStr, 10);
+          const minute = parseInt(minuteStr, 10);
+
+          await LocalNotifications.schedule({
+            notifications: [
+              {
+                id: nativeId,
+                title: notification.title,
+                body: notification.body,
+                channelId: "lectra-general",
+                actionTypeId: isTask ? "TASK_ACTIONS" : undefined,
+                schedule: {
+                  on: {
+                    hour,
+                    minute,
+                  },
+                  allowWhileIdle: true,
+                },
+                extra: notification,
+              },
+            ],
+          });
+          continue;
+        }
+
+        if (frequency === "weekly" || frequency === "selected-days") {
+          const jsWeekday = new Date(notification.scheduledAt).getDay();
+          const capacitorWeekday = ((jsWeekday % 7) + 1) as Weekday;
+          const [hourStr, minuteStr] = (reminder.time || "09:00").split(":");
+          const hour = parseInt(hourStr, 10);
+          const minute = parseInt(minuteStr, 10);
+
+          await LocalNotifications.schedule({
+            notifications: [
+              {
+                id: nativeId,
+                title: notification.title,
+                body: notification.body,
+                channelId: "lectra-general",
+                actionTypeId: isTask ? "TASK_ACTIONS" : undefined,
+                schedule: {
+                  on: {
+                    weekday: capacitorWeekday,
+                    hour,
+                    minute,
+                  },
+                  allowWhileIdle: true,
+                },
+                extra: notification,
+              },
+            ],
+          });
+          continue;
+        }
+
+        if (frequency === "monthly") {
+          await LocalNotifications.schedule({
+            notifications: [
+              {
+                id: nativeId,
+                title: notification.title,
+                body: notification.body,
+                channelId: "lectra-general",
+                actionTypeId: isTask ? "TASK_ACTIONS" : undefined,
+                schedule: {
+                  at: new Date(notification.scheduledAt),
+                  repeats: true,
+                  every: "month",
+                  allowWhileIdle: true,
+                },
+                extra: notification,
+              },
+            ],
+          });
+          continue;
+        }
+      }
+
+      // One-time custom reminder
+      await LocalNotifications.schedule({
+        notifications: [
+          {
+            id: nativeId,
+            title: notification.title,
+            body: notification.body,
+            channelId: "lectra-general",
+            actionTypeId: isTask ? "TASK_ACTIONS" : undefined,
+            schedule: {
+              at: new Date(notification.scheduledAt),
+              allowWhileIdle: true,
+            },
+            extra: notification,
+          },
+        ],
+      });
+      continue;
+    }
+
+    const isTaskNotification =
+      notification.type === "deadline-today" ||
+      notification.type === "deadline-tomorrow" ||
+      notification.type === "overdue" ||
+      (notification.type === "custom-reminder" && !!notification.workId);
+
     await LocalNotifications.schedule({
       notifications: [
         {
@@ -193,6 +329,7 @@ export async function reconcileCapacitorNotifications(
           title: notification.title,
           body: notification.body,
           channelId: "lectra-general",
+          actionTypeId: isTaskNotification ? "TASK_ACTIONS" : undefined,
           schedule: {
             at: new Date(notification.scheduledAt),
             allowWhileIdle: true,
@@ -201,6 +338,27 @@ export async function reconcileCapacitorNotifications(
         },
       ],
     });
+  }
+}
+
+export function handleCompleteNotificationAction(notification: LectraNotification) {
+  const { entries, updateEntry } = useEntryStore.getState();
+  const rawWorkId =
+    notification.workId ||
+    notification.id.replace(/^(overdue|deadline-today|deadline-tomorrow|custom-task|custom-task-daily|custom-task-weekly|custom-task-day|custom-task-monthly)-/, "").split("-")[0];
+
+  for (const entry of entries) {
+    const work = entry.works.find((w) => w.id === rawWorkId);
+    if (work) {
+      const updatedEntry: Entry = {
+        ...entry,
+        works: entry.works.map((w) =>
+          w.id === rawWorkId ? { ...w, completed: true } : w,
+        ),
+      };
+      updateEntry(updatedEntry);
+      break;
+    }
   }
 }
 
@@ -218,13 +376,24 @@ export async function syncDeliveredNotificationsToHistory() {
 }
 
 export async function initializeCapacitorNotificationActions() {
+  await registerCapacitorActionTypes();
+
   await LocalNotifications.addListener(
     "localNotificationActionPerformed",
     (event) => {
+      const extra = event.notification.extra as LectraNotification | undefined;
       recordNotificationToHistory(event.notification, true);
-      handleNotificationClick(event.notification.extra as LectraNotification);
+
+      if (event.actionId === "complete" && extra) {
+        handleCompleteNotificationAction(extra);
+      } else {
+        if (extra) {
+          handleNotificationClick(extra);
+        }
+      }
     },
   );
+
   await LocalNotifications.addListener(
     "localNotificationReceived",
     (notification) => {
@@ -254,6 +423,7 @@ export async function initializeCapacitorNotificationActions() {
     });
   }
 }
+
 export async function debugNotificationState() {
   const pending = await LocalNotifications.getPending();
   const delivered = await LocalNotifications.getDeliveredNotifications();

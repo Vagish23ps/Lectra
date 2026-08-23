@@ -1,22 +1,28 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { format } from "date-fns";
 import {
   ArrowLeft,
   CalendarDays,
   CheckCircle2,
-  ChevronRight,
   Clock3,
+  AlertCircle,
+  Calendar,
+  Layers,
+  ChevronRight,
+  Bell,
+  BookOpen,
   ListTodo,
 } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import ViewEntryDialog from "@/components/dialogs/ViewEntryDialog";
+import { Button } from "@/components/ui/button";
 import { useEntryStore } from "@/store/entryStore";
-import { Entry } from "@/types/entry";
 import { usePendingTasks } from "@/hooks/usePendingTasks";
+import { Entry } from "@/types/entry";
+import ViewEntryDialog from "@/components/dialogs/ViewEntryDialog";
+import EditEntryDialog from "@/components/dialogs/EditEntryDialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { pageVariants, itemVariants, listVariants } from "@/lib/animations";
 
@@ -38,6 +44,7 @@ function PendingPageContent() {
 
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [openView, setOpenView] = useState(false);
+  const [openEdit, setOpenEdit] = useState(false);
   const [activeTab, setActiveTab] = useState<"important" | "other">(
     "important",
   );
@@ -62,6 +69,22 @@ function PendingPageContent() {
     otherTasksCount,
     totalPendingCount,
   } = usePendingTasks();
+
+  const importantCount =
+    overdueCount +
+    dueTodayCount +
+    tomorrowCount +
+    remainingCount +
+    (otherImportantTasks?.length || 0);
+
+  useEffect(() => {
+    if (selectedEntry) {
+      const updated = entries.find((e) => e.id === selectedEntry.id);
+      if (updated) {
+        setSelectedEntry(updated);
+      }
+    }
+  }, [entries, selectedEntry]);
 
   useEffect(() => {
     const tab = searchParams.get("tab");
@@ -127,42 +150,42 @@ function PendingPageContent() {
     const { work, entry, isOverdue, isDueToday, isDueTomorrow } = item;
 
     const borderClass = isOverdue
-      ? "border-2 border-red-500"
+      ? "border-red-500/30 bg-red-500/5 hover:border-red-500/60"
       : isDueToday
-        ? "border-2 border-orange-500"
+        ? "border-orange-500/30 bg-orange-500/5 hover:border-orange-500/60"
         : isDueTomorrow
-          ? "border-2 border-yellow-500"
-          : "border border-border";
+          ? "border-amber-500/30 bg-amber-500/5 hover:border-amber-500/60"
+          : "border-border bg-card hover:border-primary/40";
 
     const iconClass = isOverdue
-      ? "bg-red-500/10 text-red-400"
+      ? "bg-red-500/10 text-red-500 dark:text-red-400"
       : isDueToday
-        ? "bg-orange-500/10 text-orange-400"
+        ? "bg-orange-500/10 text-orange-500 dark:text-orange-400"
         : isDueTomorrow
-          ? "bg-yellow-500/10 text-yellow-400"
-          : "bg-amber-500/10 text-amber-400";
+          ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+          : "bg-primary/10 text-primary";
 
     const deadlineTextClass = isOverdue
-      ? "text-red-400"
+      ? "text-red-500 dark:text-red-400 font-medium"
       : isDueToday
-        ? "text-orange-400"
+        ? "text-orange-500 dark:text-orange-400 font-medium"
         : isDueTomorrow
-          ? "text-yellow-400"
-          : "text-amber-400";
+          ? "text-amber-600 dark:text-amber-400 font-medium"
+          : "text-muted-foreground";
 
     return (
       <Card
         key={work.id}
-        className={`overflow-hidden rounded-3xl bg-card transition-all hover:border-primary/50 ${borderClass}`}
+        className={`overflow-hidden rounded-2xl border transition-all shadow-xs ${borderClass}`}
       >
-        <CardContent className="p-5">
+        <CardContent className="p-4 sm:p-5">
           <button
             type="button"
             onClick={() => {
               setSelectedEntry(entry);
               setOpenView(true);
             }}
-            className="group flex w-full items-start gap-3 rounded-xl p-2 text-left transition-colors hover:bg-muted/40"
+            className="group flex w-full items-start gap-3 rounded-xl text-left transition-colors hover:bg-muted/40"
           >
             <div
               className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${iconClass}`}
@@ -171,16 +194,18 @@ function PendingPageContent() {
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="break-words text-base font-semibold">{work.task}</p>
+              <p className="break-words text-sm sm:text-base font-semibold leading-snug text-foreground">
+                {work.task}
+              </p>
 
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                <span className="rounded-full bg-primary/10 px-2.5 py-1 font-medium text-primary">
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+                <span className="rounded-md bg-primary/10 px-2 py-0.5 font-medium text-primary">
                   {entry.subject || "No subject"}
                 </span>
 
                 <span className="text-muted-foreground">•</span>
 
-                <span className="text-muted-foreground">
+                <span className="text-muted-foreground truncate max-w-[160px]">
                   {entry.entryName || "Untitled Entry"}
                 </span>
               </div>
@@ -189,12 +214,12 @@ function PendingPageContent() {
             <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1" />
           </button>
 
-          <div className="mt-5 space-y-2 border-t border-border pt-4">
+          <div className="mt-3.5 space-y-1.5 border-t border-border/60 pt-3">
             {work.deadline ? (
               <div
-                className={`flex items-center gap-2 text-sm ${deadlineTextClass}`}
+                className={`flex items-center gap-2 text-xs sm:text-sm ${deadlineTextClass}`}
               >
-                <CalendarDays className="h-4 w-4 shrink-0" />
+                <CalendarDays className="h-3.5 w-3.5 shrink-0" />
                 <span>
                   Due{" "}
                   {new Date(`${work.deadline}T00:00:00`).toLocaleDateString(
@@ -208,30 +233,15 @@ function PendingPageContent() {
                 </span>
               </div>
             ) : (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock3 className="h-4 w-4 shrink-0" />
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Clock3 className="h-3.5 w-3.5 shrink-0" />
                 <span>No deadline set</span>
               </div>
             )}
-
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Clock3 className="h-4 w-4 shrink-0" />
-              <span>
-                Created{" "}
-                {new Date(entry.createdAt).toLocaleString(undefined, {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                  hour: "numeric",
-                  minute: "2-digit",
-                  hour12: true,
-                })}
-              </span>
-            </div>
           </div>
 
           <Button
-            className="mt-5 h-11 w-full rounded-xl"
+            className="mt-3.5 h-10 w-full rounded-xl text-xs font-semibold"
             onClick={() => completeWork(entry.id, work.id)}
           >
             <CheckCircle2 className="mr-2 h-4 w-4" />
@@ -248,37 +258,39 @@ function PendingPageContent() {
     important: boolean,
   ) => {
     return (
-      <Card className="overflow-hidden rounded-3xl border border-border bg-card transition-all hover:border-primary/50">
-        <CardContent className="p-5">
+      <Card className="overflow-hidden rounded-2xl border border-border bg-card shadow-xs transition-all hover:border-primary/40">
+        <CardContent className="p-4 sm:p-5">
           <button
             type="button"
             onClick={() => {
               setSelectedEntry(entry);
               setOpenView(true);
             }}
-            className="group flex w-full items-start gap-3 rounded-xl p-2 text-left transition-colors hover:bg-muted/40"
+            className="group flex w-full items-start gap-3 rounded-xl text-left transition-colors hover:bg-muted/40"
           >
             <div
               className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
                 important
-                  ? "bg-amber-500/10 text-amber-400"
-                  : "bg-muted text-muted-foreground"
+                  ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                  : "bg-secondary text-muted-foreground"
               }`}
             >
               <ListTodo className="h-5 w-5" />
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="break-words text-base font-semibold">{work.task}</p>
+              <p className="break-words text-sm sm:text-base font-semibold leading-snug text-foreground">
+                {work.task}
+              </p>
 
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                <span className="rounded-full bg-primary/10 px-2.5 py-1 font-medium text-primary">
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+                <span className="rounded-md bg-primary/10 px-2 py-0.5 font-medium text-primary">
                   {entry.subject || "No subject"}
                 </span>
 
                 <span className="text-muted-foreground">•</span>
 
-                <span className="text-muted-foreground">
+                <span className="text-muted-foreground truncate max-w-[160px]">
                   {entry.entryName || "Untitled Entry"}
                 </span>
               </div>
@@ -287,30 +299,12 @@ function PendingPageContent() {
             <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1" />
           </button>
 
-          <div className="mt-5 space-y-2 border-t border-border pt-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Clock3 className="h-4 w-4 shrink-0" />
-              <span>No deadline set</span>
-            </div>
-
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Clock3 className="h-4 w-4 shrink-0" />
-              <span>
-                Created{" "}
-                {new Date(entry.createdAt).toLocaleString(undefined, {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                  hour: "numeric",
-                  minute: "2-digit",
-                  hour12: true,
-                })}
-              </span>
-            </div>
+          <div className="mt-3.5 border-t border-border/60 pt-3">
+            <p className="text-xs text-muted-foreground">No deadline set</p>
           </div>
 
           <Button
-            className="mt-5 h-11 w-full rounded-xl"
+            className="mt-3.5 h-10 w-full rounded-xl text-xs font-semibold"
             onClick={() => completeWork(entry.id, work.id)}
           >
             <CheckCircle2 className="mr-2 h-4 w-4" />
@@ -322,14 +316,9 @@ function PendingPageContent() {
   };
 
   return (
-    <motion.main
-      className="min-h-screen bg-background px-5 pb-28 pt-7 text-foreground"
-      variants={pageVariants}
-      initial="hidden"
-      animate="visible"
-    >
+    <main className="px-4 sm:px-5 text-foreground">
       <div className="mx-auto w-full max-w-4xl">
-        <header className="flex items-start gap-4">
+        <header className="flex items-center gap-4">
           <Button
             variant="outline"
             size="icon"
@@ -341,9 +330,11 @@ function PendingPageContent() {
           </Button>
 
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-bold tracking-tight">Pending List</h1>
+            <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+              Pending List
+            </h1>
 
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               {totalPendingCount === 0
                 ? "Nothing waiting for you"
                 : `${totalPendingCount} ${
@@ -353,35 +344,45 @@ function PendingPageContent() {
           </div>
 
           {totalPendingCount > 0 && (
-            <div className="flex h-10 min-w-10 items-center justify-center rounded-full bg-amber-500/10 px-3 text-sm font-semibold text-amber-400">
+            <div className="flex h-8 min-w-8 items-center justify-center rounded-full bg-amber-500/10 px-2.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
               {totalPendingCount}
             </div>
           )}
         </header>
 
-        <div className="mt-6 grid grid-cols-2 gap-3">
+        <div className="mt-5 grid grid-cols-2 gap-2 rounded-2xl bg-secondary/60 p-1">
           <button
             type="button"
             onClick={() => setActiveTab("important")}
-            className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition-all ${
+            className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs sm:text-sm font-semibold transition-all ${
               activeTab === "important"
-                ? "border-primary bg-primary/10 text-primary"
-                : "border-border bg-card text-muted-foreground hover:border-primary/40"
+                ? "bg-card text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            Important Tasks
+            <span>Important Tasks</span>
+            {importantCount > 0 && (
+              <span className="rounded-full bg-primary/15 px-1.5 py-0.2 text-[11px] font-bold text-primary">
+                {importantCount}
+              </span>
+            )}
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab("other")}
-            className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition-all ${
+            className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs sm:text-sm font-semibold transition-all ${
               activeTab === "other"
-                ? "border-primary bg-primary/10 text-primary"
-                : "border-border bg-card text-muted-foreground hover:border-primary/40"
+                ? "bg-card text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            Other Tasks
+            <span>Other Tasks</span>
+            {otherTasksCount > 0 && (
+              <span className="rounded-full bg-secondary px-1.5 py-0.2 text-[11px] font-bold text-foreground">
+                {otherTasksCount}
+              </span>
+            )}
           </button>
         </div>
 
@@ -642,9 +643,22 @@ function PendingPageContent() {
           open={openView}
           onOpenChange={setOpenView}
           entry={selectedEntry}
+          onEdit={(entry: Entry) => {
+            setOpenView(false);
+            setSelectedEntry(entry);
+            setOpenEdit(true);
+          }}
         />
+
+        {selectedEntry && (
+          <EditEntryDialog
+            open={openEdit}
+            onOpenChange={setOpenEdit}
+            entry={selectedEntry}
+          />
+        )}
       </div>
-    </motion.main>
+    </main>
   );
 }
 

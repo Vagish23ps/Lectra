@@ -33,9 +33,20 @@ export function recordNotificationToHistory(
     type = "deadline-tomorrow";
   } else if (title.includes("Weekly")) {
     type = "weekly-summary";
+  } else if (title.includes("Reminder")) {
+    type = "custom-reminder";
   }
 
-  const id = String(extra?.id ?? payload.id ?? `notif-${Date.now()}`);
+  const isRecurring =
+    extra?.customReminder?.type === "recurring" ||
+    type === "daily-reminder" ||
+    type === "weekly-summary";
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const baseId = String(extra?.id ?? payload.id ?? `notif-${Date.now()}`);
+  const id = isRecurring && !baseId.includes(todayStr)
+    ? `${baseId}-${todayStr}`
+    : baseId;
 
   let createdAt: string;
   if (extra?.createdAt) {

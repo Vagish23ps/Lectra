@@ -12,6 +12,7 @@ interface EntryStore {
   addEntry: (entry: Entry) => void;
   deleteEntry: (id: string) => void;
   updateEntry: (entry: Entry) => void;
+  removeTagFromAllEntries: (tagId: string) => void;
 }
 
 export const useEntryStore = create<EntryStore>()(
@@ -48,6 +49,24 @@ export const useEntryStore = create<EntryStore>()(
         const updatedEntries = get().entries.map((entry) =>
           entry.id === updatedEntry.id ? updatedEntry : entry,
         );
+
+        set({
+          entries: updatedEntries,
+        });
+
+        void notificationService.refresh(updatedEntries);
+      },
+
+      removeTagFromAllEntries: (tagId: string) => {
+        const updatedEntries = get().entries.map((entry) => {
+          if (!entry.tags || !entry.tags.includes(tagId)) {
+            return entry;
+          }
+          return {
+            ...entry,
+            tags: entry.tags.filter((t) => t !== tagId),
+          };
+        });
 
         set({
           entries: updatedEntries,
