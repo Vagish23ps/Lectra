@@ -112,15 +112,15 @@ export default function AttachmentThumbnail({
       </div>
 
       {/* Info Row */}
-      <div className="flex items-center justify-between gap-2 p-2.5">
+      <div className="box-border flex w-full min-w-0 items-center justify-between gap-2 p-2.5">
         <div
-          className="min-w-0 flex-1 cursor-pointer"
+          className="min-w-0 flex-1 overflow-hidden cursor-pointer"
           onClick={onClick}
         >
           <p className="truncate text-xs font-medium text-foreground group-hover:text-primary">
             {attachment.name}
           </p>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">
+          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
             {formatFileSize(attachment.size)}
           </p>
         </div>

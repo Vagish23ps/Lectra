@@ -5,7 +5,8 @@ import { createPortal } from "react-dom";
 import { X, Download, FileText, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Attachment } from "@/types/entry";
-import { getAttachmentFile, formatFileSize } from "@/src/lib/attachmentStorage";
+import { getAttachmentFile, exportAttachmentFile, formatFileSize } from "@/src/lib/attachmentStorage";
+import { toast } from "sonner";
 
 interface PdfViewerModalProps {
   open: boolean;
@@ -93,14 +94,30 @@ export default function PdfViewerModal({
   const fileName = attachment?.name || "PDF Document";
   const fileSize = attachment ? formatFileSize(attachment.size) : "";
 
-  const handleDownload = () => {
-    if (!objectUrl) return;
-    const a = document.createElement("a");
-    a.href = objectUrl;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+  const handleDownload = async () => {
+    try {
+      let blob: Blob | null = null;
+      if (attachment?.id) {
+        blob = await getAttachmentFile(attachment.id);
+      }
+      if (!blob && objectUrl) {
+        const res = await fetch(objectUrl);
+        blob = await res.blob();
+      }
+      if (!blob) {
+        toast.error("Could not retrieve PDF data to save.");
+        return;
+      }
+      const res = await exportAttachmentFile(blob, fileName, "application/pdf");
+      if (res.method === "share") {
+        // Shared via native Android sheet
+      } else {
+        toast.success("PDF saved.");
+      }
+    } catch (err) {
+      console.error("Save PDF error:", err);
+      toast.error("Failed to save PDF document.");
+    }
   };
 
   return createPortal(

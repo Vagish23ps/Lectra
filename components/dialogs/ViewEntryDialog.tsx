@@ -96,8 +96,6 @@ export default function ViewEntryDialog({
 
   const handleDeleteAttachment = async (attachmentId: string, attachmentName: string) => {
     if (!entry) return;
-    const confirmed = window.confirm(`Remove attachment "${attachmentName}"?`);
-    if (!confirmed) return;
 
     try {
       await deleteAttachmentFile(attachmentId);
@@ -106,7 +104,7 @@ export default function ViewEntryDialog({
         attachments: (entry.attachments || []).filter((a) => a.id !== attachmentId),
       };
       updateEntry(updatedEntry);
-      toast.success("Attachment removed.");
+      toast.success(`Removed "${attachmentName}".`);
     } catch (err) {
       console.error("Failed to delete attachment:", err);
       toast.error("Failed to delete attachment.");
@@ -125,7 +123,7 @@ export default function ViewEntryDialog({
   const photoAttachments = attachments.filter(
     (a) =>
       a.mimeType.startsWith("image/") ||
-      /\.(png|jpe?g|webp|gif|bmp|svg)$/i.test(a.name),
+      /\.(png|jpe?g|webp|gif|bmp|svg|heic|heif)$/i.test(a.name),
   );
 
   const pdfAttachments = attachments.filter(
@@ -137,7 +135,7 @@ export default function ViewEntryDialog({
   const otherAttachments = attachments.filter(
     (a) =>
       !a.mimeType.startsWith("image/") &&
-      !/\.(png|jpe?g|webp|gif|bmp|svg)$/i.test(a.name) &&
+      !/\.(png|jpe?g|webp|gif|bmp|svg|heic|heif)$/i.test(a.name) &&
       a.mimeType !== "application/pdf" &&
       !/\.pdf$/i.test(a.name),
   );
@@ -145,26 +143,26 @@ export default function ViewEntryDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[90vh] w-[calc(100vw-2rem)] max-w-lg overflow-x-hidden overflow-y-auto border-border bg-popover p-0 sm:max-w-lg">
+        <DialogContent className="box-border flex max-h-[88vh] w-[calc(100vw-2rem)] max-w-lg flex-col overflow-x-hidden overflow-y-auto border-border bg-popover p-0 sm:max-w-lg">
           {/* Header */}
-          <DialogHeader className="border-b border-border px-4 sm:px-5 pb-4 pt-4 sm:pt-5">
-            <div className="flex items-start justify-between gap-3 pr-7">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <DialogHeader className="box-border w-full min-w-0 border-b border-border px-4 pb-3.5 pt-4 pr-12 sm:px-5 sm:pt-5">
+            <div className="flex w-full min-w-0 items-start justify-between gap-2.5">
+              <div className="flex min-w-0 flex-1 items-start gap-2.5 sm:gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary sm:h-10 sm:w-10">
                   <FileText className="h-5 w-5" />
                 </div>
 
-                <div className="min-w-0 flex-1">
-                  <DialogTitle className="text-lg font-semibold leading-tight tracking-tight text-foreground sm:text-xl">
+                <div className="min-w-0 flex-1 overflow-hidden">
+                  <DialogTitle className="truncate text-base font-semibold leading-tight tracking-tight text-foreground sm:text-lg">
                     {entry.entryName || "Untitled Entry"}
                   </DialogTitle>
 
-                  <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-xs text-muted-foreground">
-                    <span className="font-medium text-primary">
+                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                    <span className="truncate font-medium text-primary">
                       {entry.subject || "No subject"}
                     </span>
                     <span>•</span>
-                    <span>
+                    <span className="shrink-0">
                       {new Date(entry.createdAt).toLocaleDateString("en-IN", {
                         day: "numeric",
                         month: "short",
@@ -180,10 +178,10 @@ export default function ViewEntryDialog({
                   variant="outline"
                   size="sm"
                   onClick={() => onEdit(entry)}
-                  className="h-8 gap-1.5 rounded-xl border-border text-xs font-medium hover:bg-secondary"
+                  className="h-8 shrink-0 gap-1.5 rounded-xl border-border px-2.5 text-xs font-medium hover:bg-secondary"
                 >
                   <Pencil className="h-3.5 w-3.5" />
-                  <span>Edit</span>
+                  <span className="hidden sm:inline">Edit</span>
                 </Button>
               )}
             </div>
@@ -191,24 +189,24 @@ export default function ViewEntryDialog({
 
           {/* Entry Content */}
           <motion.div
-            className="space-y-5 px-4 sm:px-5 pb-5 pt-3.5"
+            className="box-border w-full min-w-0 max-w-full space-y-4 px-4 pb-5 pt-3.5 sm:space-y-5 sm:px-5"
             variants={listVariants}
             initial="hidden"
             animate="visible"
           >
             {/* Tags (if present) */}
             {entry.tags && entry.tags.length > 0 && (
-              <motion.section variants={itemVariants}>
-                <div className="flex flex-wrap gap-1.5">
+              <motion.section variants={itemVariants} className="w-full min-w-0">
+                <div className="flex w-full max-w-full flex-wrap gap-1.5">
                   {entry.tags.map((tagId) => {
                     const tagName = tagMap.get(tagId) || tagId;
 
                     return (
                       <span
                         key={tagId}
-                        className="inline-flex min-h-[28px] items-center rounded-xl border border-border bg-secondary/80 px-2.5 py-0.5 text-xs font-medium text-foreground shadow-xs"
+                        className="inline-flex max-w-full min-h-[26px] items-center rounded-xl border border-border bg-secondary/80 px-2.5 py-0.5 text-xs font-medium text-foreground shadow-xs"
                       >
-                        #{tagName}
+                        <span className="truncate max-w-[200px]">#{tagName}</span>
                       </span>
                     );
                   })}
@@ -220,18 +218,18 @@ export default function ViewEntryDialog({
             {(entry.lesson.trim() || entry.notes.trim()) ? (
               <motion.section
                 variants={itemVariants}
-                className="space-y-3"
+                className="w-full min-w-0 space-y-3"
               >
                 {entry.lesson.trim() && (
-                  <div>
+                  <div className="w-full min-w-0">
                     <div className="mb-1.5 flex items-center gap-2">
-                      <StickyNote className="h-3.5 w-3.5 text-primary" />
+                      <StickyNote className="h-3.5 w-3.5 shrink-0 text-primary" />
                       <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                         Key Notes
                       </h3>
                     </div>
-                    <div className="rounded-2xl border border-border bg-background/60 p-3.5">
-                      <p className="whitespace-pre-wrap text-xs leading-relaxed text-foreground/90 sm:text-sm">
+                    <div className="box-border w-full min-w-0 rounded-2xl border border-border bg-background/60 p-3.5">
+                      <p className="whitespace-pre-wrap break-words text-xs leading-relaxed text-foreground/90 sm:text-sm">
                         {entry.lesson}
                       </p>
                     </div>
@@ -239,15 +237,15 @@ export default function ViewEntryDialog({
                 )}
 
                 {entry.notes.trim() && (
-                  <div>
+                  <div className="w-full min-w-0">
                     <div className="mb-1.5 flex items-center gap-2">
-                      <StickyNote className="h-3.5 w-3.5 text-primary" />
+                      <StickyNote className="h-3.5 w-3.5 shrink-0 text-primary" />
                       <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                         Additional Notes
                       </h3>
                     </div>
-                    <div className="rounded-2xl border border-border bg-background/60 p-3.5">
-                      <p className="whitespace-pre-wrap text-xs leading-relaxed text-foreground/90 sm:text-sm">
+                    <div className="box-border w-full min-w-0 rounded-2xl border border-border bg-background/60 p-3.5">
+                      <p className="whitespace-pre-wrap break-words text-xs leading-relaxed text-foreground/90 sm:text-sm">
                         {entry.notes}
                       </p>
                     </div>
@@ -255,7 +253,7 @@ export default function ViewEntryDialog({
                 )}
               </motion.section>
             ) : (
-              <motion.section variants={itemVariants}>
+              <motion.section variants={itemVariants} className="w-full min-w-0">
                 <div className="rounded-2xl border border-dashed border-border p-3.5 text-center text-xs italic text-muted-foreground">
                   No notes recorded for this entry.
                 </div>
@@ -265,12 +263,12 @@ export default function ViewEntryDialog({
             {/* Tasks Section */}
             <motion.section
               variants={itemVariants}
-              className="border-t border-border/80 pt-4"
+              className="w-full min-w-0 border-t border-border/80 pt-4"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div>
+              <div className="flex w-full min-w-0 items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <ListTodo className="h-4 w-4 text-primary" />
+                    <ListTodo className="h-4 w-4 shrink-0 text-primary" />
                     <h3 className="font-semibold text-sm sm:text-base text-foreground">
                       Tasks
                     </h3>
@@ -280,7 +278,7 @@ export default function ViewEntryDialog({
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2">
                   <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
                     {completedCount}/{validWorks.length} Done
                   </span>
@@ -306,7 +304,7 @@ export default function ViewEntryDialog({
                       <div
                         key={work.id}
                         ref={isHighlighted ? highlightedTaskRef : null}
-                        className={`rounded-2xl border p-3.5 sm:p-4 transition-all duration-300 ${
+                        className={`box-border w-full min-w-0 rounded-2xl border p-3.5 transition-all duration-300 sm:p-4 ${
                           isHighlighted
                             ? "border-primary bg-primary/10 shadow-md ring-2 ring-primary/40"
                             : work.completed
@@ -314,7 +312,7 @@ export default function ViewEntryDialog({
                               : "border-border bg-background/70 shadow-xs"
                         }`}
                       >
-                        <div className="flex items-start gap-3">
+                        <div className="flex w-full min-w-0 items-start gap-3">
                           <button
                             type="button"
                             onClick={() => toggleWorkCompleted(work.id)}
@@ -332,7 +330,7 @@ export default function ViewEntryDialog({
                             )}
                           </button>
 
-                          <div className="min-w-0 flex-1">
+                          <div className="min-w-0 flex-1 overflow-hidden">
                             <div className="flex items-start justify-between gap-2">
                               <p
                                 className={`break-words text-sm sm:text-base font-semibold leading-snug ${
@@ -376,7 +374,7 @@ export default function ViewEntryDialog({
                               {work.reminder && (
                                 <div className="flex items-center gap-1.5 text-xs font-medium text-primary">
                                   <Bell className="h-3.5 w-3.5 shrink-0" />
-                                  <span>{formatReminderSummary(work.reminder)}</span>
+                                  <span className="truncate">{formatReminderSummary(work.reminder)}</span>
                                 </div>
                               )}
 
@@ -456,24 +454,24 @@ export default function ViewEntryDialog({
             {entry.reminder && (
               <motion.section
                 variants={itemVariants}
-                className="border-t border-border/80 pt-4"
+                className="w-full min-w-0 border-t border-border/80 pt-4"
               >
                 <div className="mb-2.5 flex items-center gap-2">
-                  <Bell className="h-4 w-4 text-primary" />
+                  <Bell className="h-4 w-4 shrink-0 text-primary" />
                   <h3 className="font-semibold text-sm sm:text-base text-foreground">
                     Reminder
                   </h3>
                 </div>
 
-                <div className="flex items-center gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-3 sm:p-3.5">
+                <div className="box-border flex w-full min-w-0 items-center gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-3 sm:p-3.5">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                     <Bell className="h-4.5 w-4.5" />
                   </div>
-                  <div>
-                    <p className="text-xs sm:text-sm font-semibold text-foreground">
+                  <div className="min-w-0 flex-1 overflow-hidden">
+                    <p className="truncate text-xs sm:text-sm font-semibold text-foreground">
                       {formatReminderSummary(entry.reminder)}
                     </p>
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="truncate text-[11px] text-muted-foreground">
                       {entry.reminder.type === "one-time"
                         ? "One-time custom reminder"
                         : `Recurring reminder (${entry.reminder.recurrence?.frequency || "daily"})`}
@@ -487,16 +485,16 @@ export default function ViewEntryDialog({
             {attachments.length > 0 && (
               <motion.section
                 variants={itemVariants}
-                className="border-t border-border/80 pt-4"
+                className="w-full min-w-0 border-t border-border/80 pt-4"
               >
-                <div className="mb-3 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Paperclip className="h-4 w-4 text-primary" />
-                    <h3 className="font-semibold text-sm sm:text-base text-foreground">
+                <div className="mb-3 flex w-full min-w-0 items-center justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <Paperclip className="h-4 w-4 shrink-0 text-primary" />
+                    <h3 className="truncate font-semibold text-sm sm:text-base text-foreground">
                       Attachments
                     </h3>
                   </div>
-                  <span className="rounded-full bg-secondary/80 px-2.5 py-0.5 text-xs font-medium text-foreground">
+                  <span className="shrink-0 rounded-full bg-secondary/80 px-2.5 py-0.5 text-xs font-medium text-foreground">
                     {formatAttachmentSummary(attachments)}
                   </span>
                 </div>
@@ -547,16 +545,16 @@ export default function ViewEntryDialog({
                     {otherAttachments.map((att) => (
                       <div
                         key={att.id}
-                        className="flex items-center justify-between rounded-xl border border-border bg-card/60 p-2.5"
+                        className="box-border flex w-full min-w-0 items-center justify-between gap-2 rounded-xl border border-border bg-card/60 p-2.5"
                       >
-                        <div className="min-w-0 flex-1">
+                        <div className="min-w-0 flex-1 overflow-hidden">
                           <p className="truncate text-xs font-medium text-foreground">{att.name}</p>
                           <p className="text-[11px] text-muted-foreground">{formatFileSize(att.size)}</p>
                         </div>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                          className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
                           onClick={() => handleDeleteAttachment(att.id, att.name)}
                         >
                           <Trash2 className="h-3.5 w-3.5" />

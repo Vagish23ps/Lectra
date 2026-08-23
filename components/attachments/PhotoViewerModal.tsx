@@ -5,7 +5,8 @@ import { createPortal } from "react-dom";
 import { X, Download, Loader2, AlertCircle, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Attachment } from "@/types/entry";
-import { getAttachmentFile, formatFileSize } from "@/src/lib/attachmentStorage";
+import { getAttachmentFile, exportAttachmentFile, formatFileSize } from "@/src/lib/attachmentStorage";
+import { toast } from "sonner";
 
 interface PhotoViewerModalProps {
   open: boolean;
@@ -91,14 +92,34 @@ export default function PhotoViewerModal({
   const fileName = attachment?.name || "Photo Preview";
   const fileSize = attachment ? formatFileSize(attachment.size) : "";
 
-  const handleDownload = () => {
-    if (!objectUrl) return;
-    const a = document.createElement("a");
-    a.href = objectUrl;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+  const handleDownload = async () => {
+    try {
+      let blob: Blob | null = null;
+      if (attachment?.id) {
+        blob = await getAttachmentFile(attachment.id);
+      }
+      if (!blob && objectUrl) {
+        const res = await fetch(objectUrl);
+        blob = await res.blob();
+      }
+      if (!blob) {
+        toast.error("Could not retrieve image data to save.");
+        return;
+      }
+      const res = await exportAttachmentFile(
+        blob,
+        fileName,
+        attachment?.mimeType || "image/jpeg"
+      );
+      if (res.method === "share") {
+        // Shared via native Android sheet
+      } else {
+        toast.success("Image saved.");
+      }
+    } catch (err) {
+      console.error("Save photo error:", err);
+      toast.error("Failed to save image.");
+    }
   };
 
   const handleZoomIn = () => {

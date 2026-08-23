@@ -33,10 +33,10 @@ export default function ReminderSection({
   if (!reminder) {
     return (
       <>
-        <div className="flex items-center justify-between">
-          <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-            <Bell className="h-4 w-4 text-muted-foreground" />
-            {title}
+        <div className="flex w-full min-w-0 max-w-full flex-wrap items-center justify-between gap-2">
+          <label className="flex min-w-0 items-center gap-2 text-xs sm:text-sm font-medium text-foreground">
+            <Bell className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <span className="truncate">{title}</span>
           </label>
 
           <Button
@@ -44,7 +44,7 @@ export default function ReminderSection({
             variant="outline"
             size="sm"
             onClick={() => setModalOpen(true)}
-            className="h-8 rounded-xl border-dashed px-3 text-xs font-medium"
+            className="h-8 shrink-0 rounded-xl border-dashed px-2.5 text-xs font-medium"
           >
             <Plus className="mr-1 h-3.5 w-3.5" />
             Add Reminder
@@ -63,25 +63,25 @@ export default function ReminderSection({
 
   return (
     <>
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-            <Bell className="h-4 w-4 text-muted-foreground" />
-            {title}
+      <div className="box-border w-full min-w-0 max-w-full space-y-2">
+        <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-2">
+          <label className="flex min-w-0 items-center gap-2 text-xs sm:text-sm font-medium text-foreground">
+            <Bell className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <span className="truncate">{title}</span>
           </label>
         </div>
 
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-primary/25 bg-primary/5 p-3 sm:p-3.5">
-          <div className="flex min-w-0 flex-1 items-center gap-2.5">
+        <div className="box-border flex w-full min-w-0 items-center justify-between gap-2.5 rounded-2xl border border-primary/25 bg-primary/5 p-3 sm:p-3.5">
+          <div className="flex min-w-0 flex-1 items-center gap-2.5 overflow-hidden">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
               <Bell className="h-4 w-4" />
             </div>
 
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 overflow-hidden">
               <p className="truncate text-xs font-semibold text-foreground">
                 {formatReminderSummary(reminder)}
               </p>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="truncate text-[11px] text-muted-foreground">
                 {reminder.type === "one-time"
                   ? "Fires once at scheduled time"
                   : `Repeats ${reminder.recurrence?.frequency || "daily"}`}

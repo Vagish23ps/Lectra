@@ -147,13 +147,19 @@ export default function EditEntryDialog({
       "image/gif",
       "image/bmp",
       "image/svg+xml",
+      "image/heic",
+      "image/heif",
     ];
 
     const newItems: PendingNewAttachment[] = [];
 
     Array.from(files).forEach((file) => {
-      const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
-      const isImg = file.type.startsWith("image/") || /\.(png|jpe?g|webp|gif|bmp|svg)$/i.test(file.name);
+      const isPdf =
+        file.type === "application/pdf" ||
+        file.name.toLowerCase().endsWith(".pdf");
+      const isImg =
+        file.type.startsWith("image/") ||
+        /\.(png|jpe?g|webp|gif|bmp|svg|heic|heif)$/i.test(file.name);
 
       if (!isPdf && !isImg && !allowedTypes.includes(file.type)) {
         toast.error(`"${file.name}" has unsupported format. Only Photos and PDFs are supported.`);
@@ -166,9 +172,7 @@ export default function EditEntryDialog({
       }
 
       const id = crypto.randomUUID();
-      const previewUrl = (isImg || file.type.startsWith("image/"))
-        ? URL.createObjectURL(file)
-        : undefined;
+      const previewUrl = isImg ? URL.createObjectURL(file) : undefined;
 
       newItems.push({
         id,
@@ -183,6 +187,9 @@ export default function EditEntryDialog({
 
     if (newItems.length > 0) {
       setNewAttachments((prev) => [...prev, ...newItems]);
+      toast.success(
+        `Added ${newItems.length} file${newItems.length > 1 ? "s" : ""}.`
+      );
     }
   };
 
@@ -263,7 +270,7 @@ export default function EditEntryDialog({
       existingAttachments.filter(
         (a) =>
           a.mimeType.startsWith("image/") ||
-          /\.(png|jpe?g|webp|gif|bmp|svg)$/i.test(a.name),
+          /\.(png|jpe?g|webp|gif|bmp|svg|heic|heif)$/i.test(a.name),
       ),
     [existingAttachments],
   );
@@ -284,7 +291,7 @@ export default function EditEntryDialog({
       newAttachments.filter(
         (a) =>
           a.mimeType.startsWith("image/") ||
-          /\.(png|jpe?g|webp|gif|bmp|svg)$/i.test(a.name),
+          /\.(png|jpe?g|webp|gif|bmp|svg|heic|heif)$/i.test(a.name),
       ),
     [newAttachments],
   );
@@ -304,70 +311,70 @@ export default function EditEntryDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={(v) => (!v ? handleClose() : onOpenChange(v))}>
-        <DialogContent className="max-h-[90vh] w-[calc(100vw-2rem)] max-w-lg overflow-x-hidden overflow-y-auto border-border bg-popover p-0 sm:max-w-lg">
+        <DialogContent className="box-border flex max-h-[88vh] w-[calc(100vw-2rem)] max-w-lg flex-col overflow-x-hidden overflow-y-auto border-border bg-popover p-0 sm:max-w-lg">
           {/* Header */}
-          <DialogHeader className="border-b border-border px-4 sm:px-5 pb-3.5 pt-4 sm:pt-5">
-            <DialogTitle className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">
+          <DialogHeader className="box-border w-full min-w-0 border-b border-border px-4 pb-3.5 pt-4 pr-12 sm:px-5 sm:pt-5">
+            <DialogTitle className="truncate text-lg font-semibold tracking-tight text-foreground sm:text-xl">
               Edit Entry
             </DialogTitle>
-            <p className="text-xs sm:text-sm text-muted-foreground">
+            <p className="text-xs text-muted-foreground sm:text-sm">
               Update notes, tasks and attached materials.
             </p>
           </DialogHeader>
 
           {/* Form */}
           <motion.div
-            className="space-y-4 sm:space-y-5 px-4 sm:px-5 pb-5 pt-3.5"
+            className="box-border w-full min-w-0 max-w-full space-y-4 px-4 pb-5 pt-3.5 sm:space-y-5 sm:px-5"
             variants={listVariants}
             initial="hidden"
             animate="visible"
           >
             {/* Entry Name */}
-            <motion.section variants={itemVariants} className="space-y-1.5">
-              <label className="flex items-center gap-2 text-xs sm:text-sm font-medium text-foreground">
-                <FileText className="h-4 w-4 text-muted-foreground" />
-                Entry Name
+            <motion.section variants={itemVariants} className="w-full min-w-0 space-y-1.5">
+              <label className="flex items-center gap-2 text-xs font-medium text-foreground sm:text-sm">
+                <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <span>Entry Name</span>
               </label>
               <Input
                 placeholder="e.g. Unit 3 Database Concepts"
                 value={entryName}
                 onChange={(e) => setEntryName(e.target.value)}
-                className="h-11 sm:h-12 rounded-xl bg-background text-sm"
+                className="h-11 w-full min-w-0 rounded-xl bg-background text-sm sm:h-12"
               />
             </motion.section>
 
             {/* Subject */}
-            <motion.section variants={itemVariants} className="space-y-1.5">
-              <label className="flex items-center gap-2 text-xs sm:text-sm font-medium text-foreground">
-                <Tag className="h-4 w-4 text-muted-foreground" />
-                Subject
+            <motion.section variants={itemVariants} className="w-full min-w-0 space-y-1.5">
+              <label className="flex items-center gap-2 text-xs font-medium text-foreground sm:text-sm">
+                <Tag className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <span>Subject</span>
               </label>
               <Input
                 placeholder="e.g. Computer Science"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                className="h-11 sm:h-12 rounded-xl bg-background text-sm"
+                className="h-11 w-full min-w-0 rounded-xl bg-background text-sm sm:h-12"
               />
             </motion.section>
 
             {/* Key Notes */}
-            <motion.section variants={itemVariants} className="space-y-1.5">
-              <label className="flex items-center gap-2 text-xs sm:text-sm font-medium text-foreground">
-                <StickyNote className="h-4 w-4 text-muted-foreground" />
-                Key Notes
+            <motion.section variants={itemVariants} className="w-full min-w-0 space-y-1.5">
+              <label className="flex items-center gap-2 text-xs font-medium text-foreground sm:text-sm">
+                <StickyNote className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <span>Key Notes</span>
               </label>
               <Textarea
                 placeholder="Summary of today's lesson, important points..."
                 value={lesson}
                 onChange={(e) => setLesson(e.target.value)}
-                className="min-h-24 sm:min-h-28 resize-none rounded-xl bg-background text-sm leading-relaxed"
+                className="min-h-24 w-full min-w-0 resize-none rounded-xl bg-background text-sm leading-relaxed sm:min-h-28"
               />
             </motion.section>
 
             {/* Tags / Categories */}
             <motion.section
               variants={itemVariants}
-              className="border-t border-border/80 pt-4"
+              className="w-full min-w-0 border-t border-border/80 pt-4"
             >
               <TagSelector
                 selectedTagIds={tags}
@@ -378,7 +385,7 @@ export default function EditEntryDialog({
             {/* Entry-Level Custom Reminder */}
             <motion.section
               variants={itemVariants}
-              className="border-t border-border/80 pt-4"
+              className="w-full min-w-0 border-t border-border/80 pt-4"
             >
               <ReminderSection
                 reminder={reminder}
@@ -390,13 +397,13 @@ export default function EditEntryDialog({
             {/* Works / Tasks Section */}
             <motion.section
               variants={itemVariants}
-              className="border-t border-border/80 pt-4"
+              className="w-full min-w-0 border-t border-border/80 pt-4"
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="flex items-center gap-2 text-xs sm:text-sm font-medium text-foreground">
-                    <ListTodo className="h-4 w-4 text-muted-foreground" />
-                    Tasks / Assignments
+              <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <h3 className="flex items-center gap-2 text-xs font-medium text-foreground sm:text-sm">
+                    <ListTodo className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="truncate">Tasks / Assignments</span>
                   </h3>
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     Update or add tasks for this entry.
@@ -408,7 +415,7 @@ export default function EditEntryDialog({
                   variant="outline"
                   size="sm"
                   onClick={addWork}
-                  className="h-8 rounded-xl border-dashed text-xs"
+                  className="h-8 shrink-0 rounded-xl border-dashed px-2.5 text-xs"
                 >
                   <Plus className="mr-1 h-3.5 w-3.5" />
                   Add Task
@@ -423,9 +430,9 @@ export default function EditEntryDialog({
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
-                    className="rounded-2xl border border-border bg-background p-3.5 sm:p-4 shadow-xs"
+                    className="box-border w-full min-w-0 rounded-2xl border border-border bg-background p-3.5 shadow-xs sm:p-4"
                   >
-                    <div className="flex items-center justify-between gap-3">
+                    <div className="flex w-full min-w-0 items-center justify-between gap-3">
                       <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                         Task #{index + 1}
                       </span>
@@ -435,7 +442,7 @@ export default function EditEntryDialog({
                         variant="ghost"
                         size="icon"
                         onClick={() => removeWork(work.id)}
-                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -448,14 +455,14 @@ export default function EditEntryDialog({
                         onChange={(e) =>
                           updateWork(work.id, "task", e.target.value)
                         }
-                        className="h-10 sm:h-11 rounded-xl bg-card text-sm"
+                        className="h-10 w-full min-w-0 rounded-xl bg-card text-sm sm:h-11"
                       />
                     </div>
 
                     {/* Pending List Toggle */}
-                    <label className="mt-3 flex cursor-pointer items-center justify-between rounded-xl border border-border bg-card p-2.5 sm:p-3">
-                      <div>
-                        <p className="text-xs sm:text-sm font-medium text-foreground">
+                    <label className="mt-3 flex w-full min-w-0 cursor-pointer items-center justify-between gap-3 rounded-xl border border-border bg-card p-2.5 sm:p-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium text-foreground sm:text-sm">
                           Add to Pending List
                         </p>
                         <p className="text-[11px] text-muted-foreground">
@@ -469,15 +476,15 @@ export default function EditEntryDialog({
                         onChange={(e) =>
                           updateWork(work.id, "addToPending", e.target.checked)
                         }
-                        className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                        className="h-4 w-4 shrink-0 rounded border-border text-primary focus:ring-primary"
                       />
                     </label>
 
                     {work.addToPending && (
                       <div className="mt-3 space-y-1.5">
-                        <label className="flex items-center gap-2 text-xs sm:text-sm font-medium text-foreground">
-                          <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                          Deadline
+                        <label className="flex items-center gap-2 text-xs font-medium text-foreground sm:text-sm">
+                          <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" />
+                          <span>Deadline</span>
                           <span className="font-normal text-muted-foreground">
                             (Optional)
                           </span>
@@ -489,7 +496,7 @@ export default function EditEntryDialog({
                           onChange={(e) =>
                             updateWork(work.id, "deadline", e.target.value)
                           }
-                          className="h-10 sm:h-11 rounded-xl bg-card text-sm"
+                          className="h-10 w-full min-w-0 rounded-xl bg-card text-sm sm:h-11"
                         />
                       </div>
                     )}
@@ -511,15 +518,15 @@ export default function EditEntryDialog({
             {/* Attachments Section */}
             <motion.section
               variants={itemVariants}
-              className="border-t border-border/80 pt-4"
+              className="w-full min-w-0 border-t border-border/80 pt-4"
             >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <label className="flex items-center gap-2 text-xs sm:text-sm font-medium text-foreground">
+              <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <label className="flex min-w-0 items-center gap-2 text-xs font-medium text-foreground sm:text-sm">
                     <Paperclip className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <span>Attachments</span>
+                    <span className="truncate">Attachments</span>
                     {totalAttachmentsCount > 0 && (
-                      <span className="text-xs text-primary font-semibold">
+                      <span className="shrink-0 text-xs font-semibold text-primary">
                         ({totalAttachmentsCount} total)
                       </span>
                     )}
@@ -533,7 +540,7 @@ export default function EditEntryDialog({
                 <input
                   ref={photoInputRef}
                   type="file"
-                  accept="image/png,image/jpeg,image/webp,image/jpg,image/gif,image/bmp"
+                  accept="image/*,.png,.jpg,.jpeg,.webp,.gif,.bmp,.heic,.heif"
                   multiple
                   onChange={(e) => {
                     handleFilesAdded(e.target.files);
@@ -546,7 +553,7 @@ export default function EditEntryDialog({
                 <input
                   ref={pdfInputRef}
                   type="file"
-                  accept="application/pdf"
+                  accept="application/pdf,.pdf"
                   multiple
                   onChange={(e) => {
                     handleFilesAdded(e.target.files);
@@ -557,10 +564,10 @@ export default function EditEntryDialog({
                 />
 
                 {/* Dual Action Buttons via Labels */}
-                <div className="flex items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2">
                   <label
                     htmlFor="edit-entry-photo-input"
-                    className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-xl border border-dashed border-border bg-card px-2.5 sm:px-3 text-xs font-medium text-foreground transition-colors hover:bg-secondary active:scale-95"
+                    className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-xl border border-dashed border-border bg-card px-2.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary active:scale-95 sm:px-3"
                   >
                     <Camera className="h-3.5 w-3.5 text-primary" />
                     <span>Add Photo</span>
@@ -568,7 +575,7 @@ export default function EditEntryDialog({
 
                   <label
                     htmlFor="edit-entry-pdf-input"
-                    className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-xl border border-dashed border-border bg-card px-2.5 sm:px-3 text-xs font-medium text-foreground transition-colors hover:bg-secondary active:scale-95"
+                    className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-xl border border-dashed border-border bg-card px-2.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary active:scale-95 sm:px-3"
                   >
                     <FileText className="h-3.5 w-3.5 text-red-400" />
                     <span>Add PDF</span>

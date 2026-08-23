@@ -151,17 +151,17 @@ export default function ReminderConfigModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] w-[calc(100vw-2rem)] max-w-sm overflow-x-hidden overflow-y-auto rounded-3xl border-border bg-popover p-5 sm:max-w-md">
-        <DialogHeader className="pb-3 text-left">
-          <DialogTitle className="flex items-center gap-2.5 text-lg font-bold text-foreground">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+      <DialogContent className="box-border flex max-h-[88vh] w-[calc(100vw-2rem)] max-w-sm flex-col overflow-x-hidden overflow-y-auto rounded-3xl border-border bg-popover p-4 sm:p-5 sm:max-w-md">
+        <DialogHeader className="box-border w-full min-w-0 pb-3 pr-10 text-left">
+          <DialogTitle className="flex items-center gap-2.5 text-base font-bold text-foreground sm:text-lg">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <Bell className="h-4 w-4" />
             </div>
-            {title}
+            <span className="truncate">{title}</span>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="box-border w-full min-w-0 space-y-4">
           {/* Type Toggle: One-Time vs Recurring */}
           <div className="grid grid-cols-2 gap-2 rounded-2xl bg-secondary/60 p-1">
             <button
@@ -296,7 +296,7 @@ export default function ReminderConfigModal({
                   <label className="mb-2 block text-xs font-medium text-muted-foreground">
                     Select active days:
                   </label>
-                  <div className="grid grid-cols-7 gap-1.5">
+                  <div className="grid grid-cols-7 gap-1 w-full min-w-0">
                     {WEEKDAYS_SHORT.map((name, index) => {
                       const isSelected = selectedDays.includes(index);
                       return (
@@ -304,7 +304,7 @@ export default function ReminderConfigModal({
                           key={name}
                           type="button"
                           onClick={() => toggleSelectedDay(index)}
-                          className={`flex h-10 w-full flex-col items-center justify-center rounded-xl text-xs font-bold transition-all ${
+                          className={`flex h-9 sm:h-10 w-full px-0 flex-col items-center justify-center rounded-xl text-[11px] sm:text-xs font-bold transition-all ${
                             isSelected
                               ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
                               : "border border-border bg-secondary/30 text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
