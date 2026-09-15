@@ -7,9 +7,10 @@ import { useEntryStore } from "./entryStore";
 export interface NotificationSettings {
   enabled: boolean;
 
-  dailyReminder: boolean;
+  // Deprecated legacy daily reminder properties (removed in favor of custom reminders)
+  dailyReminder?: boolean;
   dailyReminderEnabled?: boolean;
-  dailyReminderTime: string;
+  dailyReminderTime?: string;
 
   overdueReminder: boolean;
   overdueEnabled?: boolean;
@@ -42,10 +43,6 @@ export const useNotificationSettingsStore = create<NotificationSettings>()(
     (set) => ({
       enabled: true,
 
-      dailyReminder: true,
-      dailyReminderEnabled: true,
-      dailyReminderTime: "20:00",
-
       overdueReminder: true,
       overdueEnabled: true,
       overdueReminderTime: "07:30",
@@ -69,10 +66,6 @@ export const useNotificationSettingsStore = create<NotificationSettings>()(
       setSetting: (key, value) => {
         // Reset today's shown notification if its reminder time changes
         switch (key) {
-          case "dailyReminderTime":
-            resetNotification("daily-reminder");
-            break;
-
           case "overdueReminderTime":
             resetNotification("overdue");
             break;
@@ -95,10 +88,6 @@ export const useNotificationSettingsStore = create<NotificationSettings>()(
           const updates: Partial<NotificationSettings> = {
             [key]: value,
           };
-
-          // Synchronize alias properties
-          if (key === "dailyReminder") updates.dailyReminderEnabled = value as boolean;
-          if (key === "dailyReminderEnabled") updates.dailyReminder = value as boolean;
 
           if (key === "overdueReminder") updates.overdueEnabled = value as boolean;
           if (key === "overdueEnabled") updates.overdueReminder = value as boolean;

@@ -1,19 +1,55 @@
 import { LectraNotification } from "./notificationTypes";
+import { useEntryStore } from "@/store/entryStore";
 
 export function handleNotificationClick(
   notification: LectraNotification
 ) {
-  if (notification.entryId) {
-    const workParam = notification.workId ? `&workId=${notification.workId}` : "";
-    window.location.href = `/?viewEntry=${notification.entryId}${workParam}`;
+  let targetEntryId = notification.entryId;
+  let targetWorkId = notification.workId;
+
+  if (!targetEntryId) {
+    const { entries } = useEntryStore.getState();
+    const rawWorkId =
+      notification.workId ||
+      notification.id
+        .replace(
+          /^(overdue|deadline-today|deadline-tomorrow|custom-task|custom-task-daily|custom-task-weekly|custom-task-day|custom-task-monthly)-/,
+          ""
+        )
+        .split("-")[0];
+
+    for (const entry of entries) {
+      const work = entry.works.find((w) => w.id === rawWorkId);
+      if (work) {
+        targetEntryId = entry.id;
+        targetWorkId = work.id;
+        break;
+      }
+      if (
+        (entry.entryName && notification.body.includes(entry.entryName)) ||
+        (entry.subject && notification.body.includes(entry.subject))
+      ) {
+        targetEntryId = entry.id;
+        break;
+      }
+      const matchWork = entry.works.find(
+        (w) => w.task && notification.body.includes(w.task)
+      );
+      if (matchWork) {
+        targetEntryId = entry.id;
+        targetWorkId = matchWork.id;
+        break;
+      }
+    }
+  }
+
+  if (targetEntryId) {
+    const workParam = targetWorkId ? `&workId=${targetWorkId}` : "";
+    window.location.href = `/?viewEntry=${targetEntryId}${workParam}`;
     return;
   }
 
   switch (notification.type) {
-    case "daily-reminder":
-      window.location.href = "/";
-      break;
-
     case "deadline-today":
     case "deadline-tomorrow":
     case "overdue":
@@ -21,8 +57,6 @@ export function handleNotificationClick(
       break;
 
     case "weekly-summary":
-      window.location.href = "/";
-      break;
     default:
       window.location.href = "/";
       break;

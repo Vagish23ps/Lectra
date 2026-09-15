@@ -163,3 +163,21 @@
     font: inherit;
   }
 }
+
+/* Toast container positioning safely below Android status bar */
+[data-sonner-toaster] {
+  top: calc(env(safe-area-inset-top, 0px) + 0.85rem) !important;
+  pointer-events: none;
+}
+
+[data-sonner-toaster][data-x-position="center"] {
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  max-width: calc(100vw - 2rem) !important;
+}
+
+[data-sonner-toast] {
+  pointer-events: auto;
+  max-width: calc(100vw - 2rem) !important;
+  word-break: break-word !important;
+}

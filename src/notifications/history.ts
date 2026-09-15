@@ -1,26 +1,21 @@
 import { NotificationItem, useNotificationStore } from "@/store/notificationStore";
-import { LectraNotification, NotificationType } from "./notificationTypes";
+import { NotificationType, LectraNotification } from "./notificationTypes";
 
-export function addHistory(
-  notification: NotificationItem
-) {
-  useNotificationStore
-    .getState()
-    .addNotification(notification);
+export function addHistory(notification: NotificationItem) {
+  useNotificationStore.getState().addNotification(notification);
 }
 
-export function recordNotificationToHistory(
-  payload: any,
-  read = false
-) {
+export function recordNotificationToHistory(payload: any, read = false) {
   if (!payload) return;
 
-  const extra = payload.extra as LectraNotification | undefined;
+  const extra = (payload.extra || (payload.scheduledAt ? payload : undefined)) as
+    | LectraNotification
+    | undefined;
 
   const title = extra?.title ?? payload.title ?? "Notification";
   const body = extra?.body ?? payload.body ?? "";
 
-  let type: NotificationType = "daily-reminder";
+  let type: NotificationType = "custom-reminder";
   if (extra?.type) {
     type = extra.type;
   } else if (payload.type) {
@@ -39,7 +34,6 @@ export function recordNotificationToHistory(
 
   const isRecurring =
     extra?.customReminder?.type === "recurring" ||
-    type === "daily-reminder" ||
     type === "weekly-summary";
 
   const todayStr = new Date().toISOString().slice(0, 10);
@@ -50,9 +44,13 @@ export function recordNotificationToHistory(
 
   let createdAt: string;
   if (extra?.createdAt) {
-    createdAt = typeof extra.createdAt === "number" ? new Date(extra.createdAt).toISOString() : String(extra.createdAt);
+    createdAt = typeof extra.createdAt === "number"
+      ? new Date(extra.createdAt).toISOString()
+      : String(extra.createdAt);
   } else if (payload.createdAt) {
-    createdAt = typeof payload.createdAt === "number" ? new Date(payload.createdAt).toISOString() : String(payload.createdAt);
+    createdAt = typeof payload.createdAt === "number"
+      ? new Date(payload.createdAt).toISOString()
+      : String(payload.createdAt);
   } else {
     createdAt = new Date().toISOString();
   }
@@ -64,5 +62,7 @@ export function recordNotificationToHistory(
     body,
     createdAt,
     read,
+    entryId: extra?.entryId,
+    workId: extra?.workId,
   });
 }

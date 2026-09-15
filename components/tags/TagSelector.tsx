@@ -51,7 +51,7 @@ export default function TagSelector({
       <div className="flex flex-wrap items-center justify-between gap-2 w-full min-w-0">
         <label className="flex min-w-0 items-center gap-2 text-xs sm:text-sm font-medium text-foreground">
           <TagIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <span className="truncate">Tags / Categories</span>
+          <span className="truncate">Tags</span>
         </label>
 
         {!isCreating && (
@@ -81,7 +81,7 @@ export default function TagSelector({
             <Input
               value={newTagName}
               onChange={(e) => setNewTagName(e.target.value)}
-              placeholder="Enter new tag name..."
+              placeholder="Tag name"
               className="h-9 min-w-0 flex-1 rounded-xl bg-background text-xs"
               autoFocus
               maxLength={30}

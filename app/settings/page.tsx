@@ -8,6 +8,8 @@ import {
   Info,
   ChevronRight,
   Tag as TagIcon,
+  FileArchive,
+  HardDrive,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,7 +29,7 @@ export default function SettingsPage() {
       : "System";
 
   return (
-    <main className="px-4 sm:px-5 text-foreground">
+    <main className="px-4 sm:px-5 text-foreground pb-12">
       <div className="mx-auto w-full max-w-4xl">
         {/* Header */}
         <header className="flex items-center gap-4">
@@ -108,6 +110,58 @@ export default function SettingsPage() {
                   )}
                   <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
                 </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Backup & Restore */}
+          <div>
+            <Card
+              className="cursor-pointer overflow-hidden rounded-3xl border-border bg-card shadow-sm transition-all hover:border-primary/50 active:scale-[0.99]"
+              onClick={() => router.push("/settings/backup")}
+            >
+              <CardContent className="flex items-center justify-between gap-4 p-4 sm:p-5">
+                <div className="flex items-center gap-3.5 sm:gap-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-500">
+                    <FileArchive className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm sm:text-base font-semibold text-foreground">
+                      Backup &amp; Restore
+                    </h2>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Export or import all entries, attachments &amp; data
+                    </p>
+                  </div>
+                </div>
+
+                <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Storage Management */}
+          <div>
+            <Card
+              className="cursor-pointer overflow-hidden rounded-3xl border-border bg-card shadow-sm transition-all hover:border-primary/50 active:scale-[0.99]"
+              onClick={() => router.push("/settings/storage")}
+            >
+              <CardContent className="flex items-center justify-between gap-4 p-4 sm:p-5">
+                <div className="flex items-center gap-3.5 sm:gap-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-cyan-500/10 text-cyan-500">
+                    <HardDrive className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm sm:text-base font-semibold text-foreground">
+                      Storage
+                    </h2>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Manage stored attachments and local database
+                    </p>
+                  </div>
+                </div>
+
+                <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
               </CardContent>
             </Card>
           </div>

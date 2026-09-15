@@ -19,6 +19,7 @@ import {
   Sparkles,
   Bell,
   ArrowRight,
+  Plus,
 } from "lucide-react";
 
 import {
@@ -28,6 +29,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Entry, Attachment } from "@/types/entry";
 import { useEntryStore } from "@/store/entryStore";
 import { useAllTags } from "@/store/tagStore";
@@ -64,15 +66,36 @@ export default function ViewEntryDialog({
   const [selectedPhoto, setSelectedPhoto] = useState<Attachment | null>(null);
   const [selectedPdf, setSelectedPdf] = useState<Attachment | null>(null);
   const highlightedTaskRef = useRef<HTMLDivElement>(null);
+  const [activeHighlightId, setActiveHighlightId] = useState<string | null>(null);
+  const [inlineTaskText, setInlineTaskText] = useState("");
+  const addInlineWork = useEntryStore((state) => state.addInlineWork);
+
+  const handleAddInlineTask = () => {
+    if (!entry || !inlineTaskText.trim()) return;
+    addInlineWork(entry.id, inlineTaskText);
+    setInlineTaskText("");
+  };
 
   useEffect(() => {
-    if (open && highlightWorkId && highlightedTaskRef.current) {
-      setTimeout(() => {
+    if (open && highlightWorkId) {
+      setActiveHighlightId(highlightWorkId);
+      const scrollTimer = setTimeout(() => {
         highlightedTaskRef.current?.scrollIntoView({
           behavior: "smooth",
           block: "center",
         });
-      }, 300);
+      }, 250);
+
+      const fadeTimer = setTimeout(() => {
+        setActiveHighlightId(null);
+      }, 3000);
+
+      return () => {
+        clearTimeout(scrollTimer);
+        clearTimeout(fadeTimer);
+      };
+    } else if (!open) {
+      setActiveHighlightId(null);
     }
   }, [open, highlightWorkId]);
 
@@ -159,7 +182,7 @@ export default function ViewEntryDialog({
 
                   <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
                     <span className="truncate font-medium text-primary">
-                      {entry.subject || "No subject"}
+                      {entry.subject || "General"}
                     </span>
                     <span>•</span>
                     <span className="shrink-0">
@@ -172,18 +195,6 @@ export default function ViewEntryDialog({
                   </div>
                 </div>
               </div>
-
-              {onEdit && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onEdit(entry)}
-                  className="h-8 shrink-0 gap-1.5 rounded-xl border-border px-2.5 text-xs font-medium hover:bg-secondary"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Edit</span>
-                </Button>
-              )}
             </div>
           </DialogHeader>
 
@@ -225,7 +236,7 @@ export default function ViewEntryDialog({
                     <div className="mb-1.5 flex items-center gap-2">
                       <StickyNote className="h-3.5 w-3.5 shrink-0 text-primary" />
                       <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        Key Notes
+                        Details
                       </h3>
                     </div>
                     <div className="box-border w-full min-w-0 rounded-2xl border border-border bg-background/60 p-3.5">
@@ -241,7 +252,7 @@ export default function ViewEntryDialog({
                     <div className="mb-1.5 flex items-center gap-2">
                       <StickyNote className="h-3.5 w-3.5 shrink-0 text-primary" />
                       <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        Additional Notes
+                        Notes
                       </h3>
                     </div>
                     <div className="box-border w-full min-w-0 rounded-2xl border border-border bg-background/60 p-3.5">
@@ -273,9 +284,6 @@ export default function ViewEntryDialog({
                       Tasks
                     </h3>
                   </div>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    Actions and assignments related to this entry.
-                  </p>
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2">
@@ -298,7 +306,7 @@ export default function ViewEntryDialog({
                       new Date(`${work.deadline}T00:00:00`).getTime() <
                         new Date().setHours(0, 0, 0, 0);
 
-                    const isHighlighted = highlightWorkId === work.id;
+                    const isHighlighted = activeHighlightId === work.id;
 
                     return (
                       <div
@@ -442,6 +450,32 @@ export default function ViewEntryDialog({
                 )}
               </div>
 
+              {/* Inline Task Creation */}
+              <div className="mt-3 flex items-center gap-2">
+                <Input
+                  placeholder="Quick add a task... (Press Enter)"
+                  value={inlineTaskText}
+                  onChange={(e) => setInlineTaskText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddInlineTask();
+                    }
+                  }}
+                  className="h-10 text-xs sm:text-sm rounded-xl bg-background"
+                />
+                <Button
+                  size="sm"
+                  type="button"
+                  className="h-10 rounded-xl px-3.5 text-xs font-semibold shrink-0"
+                  onClick={handleAddInlineTask}
+                  disabled={!inlineTaskText.trim()}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add
+                </Button>
+              </div>
+
               {pendingCount > 0 && (
                 <p className="mt-2.5 text-xs text-amber-500 dark:text-amber-400">
                   {pendingCount} {pendingCount === 1 ? "task is" : "tasks are"}{" "}
@@ -554,8 +588,9 @@ export default function ViewEntryDialog({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                          className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
                           onClick={() => handleDeleteAttachment(att.id, att.name)}
+                          aria-label={`Remove file ${att.name}`}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>

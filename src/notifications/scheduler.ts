@@ -27,6 +27,8 @@ export async function runNotificationScheduler(entries: Entry[]) {
 
     if (Capacitor.isNativePlatform()) {
       await reconcileCapacitorNotifications(notifications, settings);
+      // DO NOT record future scheduled notifications to history here.
+      // History is only recorded when the notification actually triggers and is delivered.
       return;
     }
   }
@@ -34,6 +36,7 @@ export async function runNotificationScheduler(entries: Entry[]) {
   const now = Date.now();
 
   for (const notification of notifications) {
+    // Only fire and record if the scheduled time has actually arrived right now (within last minute)
     if (
       notification.scheduledAt <= now &&
       notification.scheduledAt > now - 60 * 1000

@@ -18,8 +18,8 @@ export const pageVariants: Variants = {
   visible: {
     opacity: 1,
     transition: {
-      duration: 0.3,
-      staggerChildren: 0.08,
+      duration: 0.25,
+      staggerChildren: 0.05,
     },
   },
 };
@@ -38,13 +38,23 @@ export const pageVariants: Variants = {
 export const itemVariants: Variants = {
   hidden: {
     opacity: 0,
-    y: 12,
+    y: 8,
   },
   visible: {
     opacity: 1,
     y: 0,
     transition: {
-      duration: 0.22,
+      duration: 0.2,
+      ease: [0.25, 1, 0.5, 1],
+    },
+  },
+  exit: {
+    opacity: 0,
+    scale: 0.97,
+    y: -6,
+    transition: {
+      duration: 0.15,
+      ease: [0.4, 0, 1, 1],
     },
   },
 };
@@ -62,20 +72,21 @@ export const itemVariants: Variants = {
 export const dialogVariants: Variants = {
   hidden: {
     opacity: 0,
-    scale: 0.96,
+    scale: 0.97,
   },
   visible: {
     opacity: 1,
     scale: 1,
     transition: {
       duration: 0.18,
+      ease: [0.25, 1, 0.5, 1],
     },
   },
   exit: {
     opacity: 0,
-    scale: 0.96,
+    scale: 0.97,
     transition: {
-      duration: 0.15,
+      duration: 0.14,
     },
   },
 };
@@ -93,13 +104,53 @@ export const dialogVariants: Variants = {
 export const cardVariants: Variants = {
   hidden: {
     opacity: 0,
-    y: 10,
+    y: 8,
   },
   visible: {
     opacity: 1,
     y: 0,
     transition: {
       duration: 0.2,
+      ease: [0.25, 1, 0.5, 1],
+    },
+  },
+  exit: {
+    opacity: 0,
+    scale: 0.97,
+    y: -6,
+    transition: {
+      duration: 0.15,
+      ease: [0.4, 0, 1, 1],
+    },
+  },
+};
+
+/* ========================================================================
+   TAB CONTENT ANIMATIONS
+   ------------------------------------------------------------------------
+   Used for:
+   - Pending List (Important vs Other)
+   - Notifications (Notifications vs Reminders)
+   ======================================================================== */
+
+export const tabContentVariants: Variants = {
+  hidden: {
+    opacity: 0,
+    y: 6,
+  },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.18,
+      ease: [0.25, 1, 0.5, 1],
+    },
+  },
+  exit: {
+    opacity: 0,
+    y: -6,
+    transition: {
+      duration: 0.12,
     },
   },
 };
@@ -108,18 +159,13 @@ export const cardVariants: Variants = {
    LIST ANIMATIONS
    ------------------------------------------------------------------------
    Parent animation for staggered child animations.
-   Used for:
-   - Today's Entries
-   - Pending Tasks
-   - Notifications
-   - Calendar Entries
    ======================================================================== */
 
 export const listVariants: Variants = {
   hidden: {},
   visible: {
     transition: {
-      staggerChildren: 0.06,
+      staggerChildren: 0.04,
     },
   },
 };
@@ -130,32 +176,30 @@ export const listVariants: Variants = {
    Used for:
    - Buttons
    - Icon Buttons
-   - FAB
    ======================================================================== */
 
 export const buttonTap = {
-  scale: 0.96,
+  scale: 0.97,
+  transition: {
+    duration: 0.1,
+  },
 };
 
 /* ========================================================================
    BADGE ANIMATIONS
    ------------------------------------------------------------------------
-   Used for:
-   - Notification Badge
-   - Task Count Badge
-   - Status Chips
    ======================================================================== */
 
 export const badgeVariants: Variants = {
   hidden: {
-    scale: 0,
+    scale: 0.8,
     opacity: 0,
   },
   visible: {
     scale: 1,
     opacity: 1,
     transition: {
-      duration: 0.2,
+      duration: 0.18,
     },
   },
 };
@@ -163,29 +207,25 @@ export const badgeVariants: Variants = {
 /* ========================================================================
    TOAST ANIMATIONS
    ------------------------------------------------------------------------
-   Used for:
-   - Success Toast
-   - Error Toast
-   - Info Toast
    ======================================================================== */
 
 export const toastVariants: Variants = {
   hidden: {
     opacity: 0,
-    y: 12,
+    y: 10,
   },
   visible: {
     opacity: 1,
     y: 0,
     transition: {
-      duration: 0.22,
+      duration: 0.18,
     },
   },
   exit: {
     opacity: 0,
-    y: -12,
+    y: -10,
     transition: {
-      duration: 0.18,
+      duration: 0.14,
     },
   },
 };
@@ -193,29 +233,62 @@ export const toastVariants: Variants = {
 /* ========================================================================
    SHEET / PANEL ANIMATIONS
    ------------------------------------------------------------------------
-   Used for:
-   - Notification Panel
-   - Future Side Sheets
-   - Bottom Sheets
    ======================================================================== */
 
 export const sheetVariants: Variants = {
   hidden: {
     opacity: 0,
-    x: 20,
+    x: 16,
   },
   visible: {
     opacity: 1,
     x: 0,
     transition: {
-      duration: 0.22,
+      duration: 0.2,
+      ease: [0.25, 1, 0.5, 1],
     },
   },
   exit: {
     opacity: 0,
-    x: 20,
+    x: 16,
     transition: {
-      duration: 0.18,
+      duration: 0.15,
     },
   },
 };
+
+// Reduced motion support
+export function useReducedMotion(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+// Variants that respect reduced motion (opacity only, no transforms)
+export const reducedItemVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { duration: 0.15 },
+  },
+  exit: {
+    opacity: 0,
+    transition: { duration: 0.1 },
+  },
+};
+
+export const reducedCardVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { duration: 0.15 },
+  },
+  exit: {
+    opacity: 0,
+    transition: { duration: 0.1 },
+  },
+};
+
+// Helper: pick variants based on reduced motion preference
+export function pickVariants(standard: Variants, reduced: Variants, prefersReduced: boolean): Variants {
+  return prefersReduced ? reduced : standard;
+}

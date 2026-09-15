@@ -73,7 +73,7 @@ export default function NotificationPanel({
             <div className="flex-1 space-y-3 overflow-y-auto p-4">
               {notifications.length === 0 ? (
                 <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                  No notifications 🎉
+                  No notifications.
                 </div>
               ) : (
                 <motion.div className="space-y-3" variants={listVariants}>

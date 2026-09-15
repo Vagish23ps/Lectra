@@ -196,6 +196,8 @@ function CalendarDayButton({
     }
   }, [modifiers.focused]);
 
+  const hasHeatmap = modifiers.completed || modifiers.pending || modifiers.important;
+
   return (
     <Button
       ref={ref}
@@ -214,26 +216,35 @@ function CalendarDayButton({
       data-range-end={modifiers.range_end}
       data-range-middle={modifiers.range_middle}
       className={cn(
-        "relative mx-auto flex h-10 w-10 items-center justify-center rounded-full",
+        "relative mx-auto flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full text-sm font-medium",
         "border border-transparent",
-        "transition-all duration-200 ease-out",
-        "hover:scale-110",
-        "hover:-translate-y-0.5",
-        "hover:shadow-lg",
+        "transition-all duration-150 ease-out",
+        "hover:scale-105 active:scale-95",
+
+        // Default Today styling (when not selected and no heatmap)
+        modifiers.today &&
+          !modifiers.selected &&
+          !hasHeatmap &&
+          "border-primary/50 text-primary font-bold bg-primary/10",
 
         // Heatmap Colors
         modifiers.completed &&
-          "bg-emerald-600 text-white hover:bg-emerald-500",
+          "bg-emerald-600 text-white font-semibold hover:bg-emerald-500",
 
         modifiers.pending &&
-          "bg-amber-500 text-white hover:bg-amber-400",
+          "bg-amber-500 text-white font-semibold hover:bg-amber-400",
 
         modifiers.important &&
-          "bg-red-600 text-white hover:bg-red-500",
+          "bg-red-600 text-white font-semibold hover:bg-red-500",
 
-        // Selected
+        // Selected without heatmap
         modifiers.selected &&
-          "ring-2 ring-primary ring-offset-2 ring-offset-background",
+          !hasHeatmap &&
+          "bg-primary text-primary-foreground font-bold shadow-sm hover:bg-primary/90",
+
+        // Selected modifier ring for all selected states
+        modifiers.selected &&
+          "ring-2 ring-primary ring-offset-2 ring-offset-background scale-105 z-10",
 
         className
       )}

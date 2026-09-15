@@ -82,9 +82,9 @@ export default function AttachmentThumbnail({
             <span className="text-[11px]">Loading...</span>
           </div>
         ) : error || !blobUrl ? (
-          <div className="flex flex-col items-center gap-1 text-muted-foreground">
-            <ImageIcon className="h-7 w-7 opacity-40" />
-            <span className="text-[10px]">Photo</span>
+          <div className="flex flex-col items-center gap-1 text-muted-foreground p-2 text-center">
+            <ImageIcon className="h-6 w-6 opacity-40 text-amber-500" />
+            <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Attachment unavailable</span>
           </div>
         ) : (
           <img

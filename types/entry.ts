@@ -24,6 +24,7 @@ export interface Entry {
   lesson: string;
   notes: string;
   createdAt: string;
+  entryDate?: string; // "YYYY-MM-DD" — logical date of the entry (may differ from createdAt for backdated entries)
   works: WorkItem[];
   attachments?: Attachment[];
   tags?: string[];

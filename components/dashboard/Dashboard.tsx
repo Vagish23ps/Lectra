@@ -9,19 +9,27 @@ import {
   ChevronRight,
   ListTodo,
   Settings,
+  Plus,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import AddEntryDialog from "@/components/dialogs/AddEntryDialog";
 import EditEntryDialog from "@/components/dialogs/EditEntryDialog";
 import ViewEntryDialog from "@/components/dialogs/ViewEntryDialog";
+import QuickCapture from "./QuickCapture";
+import UpcomingSection from "./UpcomingSection";
+import DraftCard from "./DraftCard";
+import { UpcomingItem } from "@/hooks/useUpcomingItems";
 import { useEntryStore } from "@/store/entryStore";
+import { useDraftStore } from "@/store/draftStore";
 import { Entry } from "@/types/entry";
 import EntryCard from "./EntryCard";
 
 import NotificationBell from "@/components/notifications/NotificationBell";
 import { usePendingTasks } from "@/hooks/usePendingTasks";
-import { pageVariants, itemVariants, listVariants } from "@/lib/animations";
+
+import { pageVariants, itemVariants, listVariants, cardVariants } from "@/lib/animations";
 
 function DashboardContent() {
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
@@ -29,11 +37,13 @@ function DashboardContent() {
   const [editingEntry, setEditingEntry] = useState<Entry | null>(null);
   const [openViewDialog, setOpenViewDialog] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [openAddEntry, setOpenAddEntry] = useState(false);
   const [highlightWorkId, setHighlightWorkId] = useState<string | null>(null);
 
   const router = useRouter();
   const searchParams = useSearchParams();
   const entries = useEntryStore((state) => state.entries);
+  const hasDraft = useDraftStore((state) => state.hasDraft);
 
   useEffect(() => {
     setCurrentDate(new Date());
@@ -71,11 +81,10 @@ function DashboardContent() {
   const greeting = "Hi there..!";
 
   const todayEntries = currentDate
-    ? entries.filter(
-        (entry) =>
-          format(new Date(entry.createdAt), "yyyy-MM-dd") ===
-          format(currentDate, "yyyy-MM-dd"),
-      )
+    ? entries.filter((entry) => {
+        const entryDateStr = entry.entryDate || format(new Date(entry.createdAt), "yyyy-MM-dd");
+        return entryDateStr === format(currentDate, "yyyy-MM-dd");
+      })
     : [];
   const {
     overdueCount,
@@ -85,6 +94,7 @@ function DashboardContent() {
     otherTasksCount,
     totalPendingCount,
   } = usePendingTasks();
+
 
   const pendingCards = [
     {
@@ -129,6 +139,15 @@ function DashboardContent() {
     setOpenViewDialog(false);
     setEditingEntry(entry);
     setOpenEditDialog(true);
+  };
+
+  const handleUpcomingItemClick = (item: UpcomingItem) => {
+    const target = entries.find((e) => e.id === item.entryId);
+    if (target) {
+      setViewingEntry(target);
+      setHighlightWorkId(item.workId || null);
+      setOpenViewDialog(true);
+    }
   };
 
   return (
@@ -182,7 +201,22 @@ function DashboardContent() {
 
         {/* Add Entry CTA */}
         <section className="mt-5 sm:mt-6">
-          <AddEntryDialog />
+          <Button
+            onClick={() => setOpenAddEntry(true)}
+            className="h-13 sm:h-14 w-full rounded-2xl bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90 font-semibold text-sm sm:text-base"
+          >
+            <Plus className="mr-2 h-5 w-5" />
+            Add Entry
+          </Button>
+          <AddEntryDialog
+            externalOpen={openAddEntry}
+            onExternalOpenChange={setOpenAddEntry}
+          />
+        </section>
+
+        {/* Quick Capture */}
+        <section className="mt-2.5 sm:mt-3">
+          <QuickCapture />
         </section>
 
         {/* Today's Entries */}
@@ -208,19 +242,22 @@ function DashboardContent() {
             )}
           </div>
 
-          {todayEntries.length === 0 ? (
-            <Card className="mt-3.5 rounded-3xl border-border bg-card shadow-sm">
-              <CardContent className="flex flex-col items-center px-5 py-8 text-center sm:py-10">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary text-muted-foreground">
-                  <ClipboardList className="h-6 w-6" />
+          {/* Draft Card if unfinished draft exists */}
+          {hasDraft() && (
+            <div className="mt-3.5">
+              <DraftCard onOpenDraft={() => setOpenAddEntry(true)} />
+            </div>
+          )}
+
+          {todayEntries.length === 0 && !hasDraft() ? (
+            <Card className="mt-3.5 rounded-3xl border-border bg-card shadow-xs">
+              <CardContent className="flex flex-col items-center px-5 py-7 text-center sm:py-8">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-secondary text-muted-foreground">
+                  <ClipboardList className="h-5 w-5" />
                 </div>
 
-                <h4 className="mt-3 text-sm font-semibold text-foreground sm:text-base">
-                  Nothing captured yet
-                </h4>
-
-                <p className="mt-1 max-w-xs text-xs leading-relaxed text-muted-foreground sm:text-sm">
-                  Add your first entry and start building your daily timeline.
+                <p className="mt-2.5 text-xs sm:text-sm font-medium text-muted-foreground">
+                  No entries yet.
                 </p>
               </CardContent>
             </Card>
@@ -228,14 +265,24 @@ function DashboardContent() {
             <div className="mt-3.5 space-y-3 sm:space-y-4">
               <AnimatePresence mode="popLayout">
                 {todayEntries.map((entry) => (
-                  <div key={entry.id}>
+                  <motion.div
+                    key={entry.id}
+                    layout
+                    variants={cardVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                  >
                     <EntryCard entry={entry} />
-                  </div>
+                  </motion.div>
                 ))}
               </AnimatePresence>
             </div>
           )}
         </section>
+
+        {/* Upcoming Section */}
+        <UpcomingSection onItemClick={handleUpcomingItemClick} />
 
         {/* Pending Overview */}
         <section className="mt-6 sm:mt-7">
@@ -327,6 +374,8 @@ function DashboardContent() {
             </CardContent>
           </Card>
         </section>
+
+
 
         {/* Deep-Linked View and Edit Dialogs */}
         <ViewEntryDialog

@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { format, isSameDay } from "date-fns";
-import { ArrowLeft, CalendarDays, ClipboardList } from "lucide-react";
+import { format, isSameDay, addMonths, subMonths } from "date-fns";
+import { ArrowLeft, CalendarDays, ClipboardList, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 
 import { useEntryStore } from "@/store/entryStore";
 import EntryCard from "@/components/dashboard/EntryCard";
+import AddEntryDialog from "@/components/dialogs/AddEntryDialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { pageVariants, itemVariants, listVariants } from "@/lib/animations";
 
@@ -20,10 +21,51 @@ export default function CalendarPage() {
   const entries = useEntryStore((state) => state.entries);
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
+  const [slideDirection, setSlideDirection] = useState<number>(0);
+  const [openAddEntry, setOpenAddEntry] = useState(false);
 
-  const selectedEntries = entries.filter((entry) =>
-    isSameDay(new Date(entry.createdAt), selectedDate),
-  );
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const selectedCopy = new Date(selectedDate);
+  selectedCopy.setHours(0, 0, 0, 0);
+  const canCreateEntry = selectedCopy.getTime() <= today.getTime();
+
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartRef.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+      time: Date.now(),
+    };
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStartRef.current) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartRef.current.x;
+    const deltaY = e.changedTouches[0].clientY - touchStartRef.current.y;
+    const elapsed = Date.now() - touchStartRef.current.time;
+    touchStartRef.current = null;
+
+    // Only trigger when the gesture is clearly horizontal
+    if (Math.abs(deltaX) > 45 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5 && elapsed < 500) {
+      if (deltaX < 0) {
+        // Swipe left -> next month
+        setSlideDirection(1);
+        setCurrentMonth((prev) => addMonths(prev, 1));
+      } else {
+        // Swipe right -> previous month
+        setSlideDirection(-1);
+        setCurrentMonth((prev) => subMonths(prev, 1));
+      }
+    }
+  };
+
+  const selectedEntries = entries.filter((entry) => {
+    const entryDateStr = entry.entryDate || format(new Date(entry.createdAt), "yyyy-MM-dd");
+    return entryDateStr === format(selectedDate, "yyyy-MM-dd");
+  });
 
   type DayStatus = "completed" | "pending" | "important";
 
@@ -34,7 +76,7 @@ export default function CalendarPage() {
   const dayStatus = new Map<string, DayStatus>();
 
   entries.forEach((entry) => {
-    const key = format(new Date(entry.createdAt), "yyyy-MM-dd");
+    const key = entry.entryDate || format(new Date(entry.createdAt), "yyyy-MM-dd");
 
     const hasImportant = entry.works.some(
       (work) => work.addToPending && !work.completed && work.task.trim() !== "",
@@ -94,7 +136,7 @@ export default function CalendarPage() {
             </h1>
 
             <p className="text-xs text-muted-foreground">
-              Travel through your captured timeline
+              View entries by date
             </p>
           </div>
         </header>
@@ -103,22 +145,48 @@ export default function CalendarPage() {
         <motion.div variants={itemVariants} className="mt-5 sm:mt-6">
           <Card className="overflow-hidden rounded-3xl border-border bg-card shadow-sm">
             <CardContent className="p-4 sm:p-6">
-              <div className="flex justify-center">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(date) => {
-                    if (date) {
-                      setSelectedDate(date);
-                    }
-                  }}
-                  modifiers={{
-                    completed: completedDates,
-                    pending: pendingDates,
-                    important: importantDates,
-                  }}
+              <div
+                className="flex justify-center touch-pan-y no-page-swipe select-none"
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+              >
+                <motion.div
+                  key={format(currentMonth, "yyyy-MM")}
+                  initial={{ opacity: 0.85, x: slideDirection * 14 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.18, ease: "easeOut" }}
                   className="w-full max-w-sm"
-                />
+                >
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    month={currentMonth}
+                    onMonthChange={(newMonth) => {
+                      if (newMonth) {
+                        setSlideDirection(newMonth.getTime() > currentMonth.getTime() ? 1 : -1);
+                        setCurrentMonth(newMonth);
+                      }
+                    }}
+                    onSelect={(date) => {
+                      if (date) {
+                        setSelectedDate(date);
+                        const t = new Date();
+                        t.setHours(0, 0, 0, 0);
+                        const d = new Date(date);
+                        d.setHours(0, 0, 0, 0);
+                        if (d.getTime() > t.getTime()) {
+                          setOpenAddEntry(false);
+                        }
+                      }
+                    }}
+                    modifiers={{
+                      completed: completedDates,
+                      pending: pendingDates,
+                      important: importantDates,
+                    }}
+                    className="w-full"
+                  />
+                </motion.div>
               </div>
 
               {/* Calendar Hint Legend */}
@@ -161,11 +229,23 @@ export default function CalendarPage() {
               </div>
             </div>
 
-            {selectedEntries.length > 0 && (
-              <span className="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 px-2 text-xs font-semibold text-primary">
-                {selectedEntries.length}
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {selectedEntries.length > 0 && (
+                <span className="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 px-2 text-xs font-semibold text-primary">
+                  {selectedEntries.length}
+                </span>
+              )}
+              {canCreateEntry && (
+                <Button
+                  size="sm"
+                  className="h-8 rounded-xl px-3 text-xs font-semibold gap-1.5 shadow-xs"
+                  onClick={() => setOpenAddEntry(true)}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Create Entry
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* No Entries */}
@@ -177,18 +257,14 @@ export default function CalendarPage() {
               animate="visible"
               exit="exit"
             >
-              <Card className="rounded-3xl border-border bg-card shadow-sm">
-                <CardContent className="flex flex-col items-center px-5 py-8 text-center sm:py-10">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary text-muted-foreground">
-                    <ClipboardList className="h-6 w-6" />
+              <Card className="rounded-3xl border-border bg-card shadow-xs">
+                <CardContent className="flex flex-col items-center px-5 py-7 text-center sm:py-8">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-secondary text-muted-foreground">
+                    <ClipboardList className="h-5 w-5" />
                   </div>
 
-                  <h3 className="mt-3 text-sm font-semibold text-foreground sm:text-base">
-                    No entries on this day
-                  </h3>
-
-                  <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-                    Nothing was captured for this date.
+                  <p className="mt-2.5 text-xs sm:text-sm font-medium text-muted-foreground">
+                    No entries on this day.
                   </p>
                 </CardContent>
               </Card>
@@ -213,6 +289,12 @@ export default function CalendarPage() {
           )}
         </motion.section>
       </div>
+
+      <AddEntryDialog
+        externalOpen={openAddEntry}
+        onExternalOpenChange={setOpenAddEntry}
+        defaultEntryDate={format(selectedDate, "yyyy-MM-dd")}
+      />
     </main>
   );
 }

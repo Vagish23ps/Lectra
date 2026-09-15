@@ -8,7 +8,6 @@ import { useEntryStore } from "@/store/entryStore";
 import { Entry } from "@/types/entry";
 
 export interface RecurringNotificationSettings {
-  dailyReminderTime: string;   // "HH:MM"
   weeklySummaryTime: string;   // "HH:MM"
   weeklySummaryDay: string;    // JS convention: "0"=Sun … "6"=Sat
 }
@@ -136,6 +135,9 @@ export async function reconcileCapacitorNotifications(
 
   if (staleIds.length > 0) {
     await cancelCapacitorNotifications(staleIds);
+    await LocalNotifications.removeDeliveredNotifications({
+      notifications: staleIds.map((id) => ({ id, title: "", body: "" })),
+    }).catch(() => {});
   }
 
   // Reschedule all active notifications
@@ -150,33 +152,6 @@ export async function reconcileCapacitorNotifications(
       type: notification.type,
       scheduledAt: new Date(notification.scheduledAt).toISOString(),
     });
-
-    if (notification.type === "daily-reminder") {
-      const [hourStr, minuteStr] = settings.dailyReminderTime.split(":");
-      const hour = parseInt(hourStr, 10);
-      const minute = parseInt(minuteStr, 10);
-
-      await LocalNotifications.schedule({
-        notifications: [
-          {
-            id: nativeId,
-            title: notification.title,
-            body: notification.body,
-            channelId: "lectra-general",
-            schedule: {
-              on: {
-                hour,
-                minute,
-              },
-              allowWhileIdle: true,
-            },
-            extra: notification,
-          },
-        ],
-      });
-
-      continue;
-    }
 
     if (notification.type === "weekly-summary") {
       const [hourStr, minuteStr] = settings.weeklySummaryTime.split(":");
@@ -319,8 +294,7 @@ export async function reconcileCapacitorNotifications(
     const isTaskNotification =
       notification.type === "deadline-today" ||
       notification.type === "deadline-tomorrow" ||
-      notification.type === "overdue" ||
-      (notification.type === "custom-reminder" && !!notification.workId);
+      notification.type === "overdue";
 
     await LocalNotifications.schedule({
       notifications: [
@@ -341,7 +315,7 @@ export async function reconcileCapacitorNotifications(
   }
 }
 
-export function handleCompleteNotificationAction(notification: LectraNotification) {
+export async function handleCompleteNotificationAction(notification: LectraNotification) {
   const { entries, updateEntry } = useEntryStore.getState();
   const rawWorkId =
     notification.workId ||
@@ -360,6 +334,15 @@ export function handleCompleteNotificationAction(notification: LectraNotificatio
       break;
     }
   }
+
+  // Remove delivered notification from Android status bar / tray immediately
+  const nativeId = getNotificationNativeId(notification.id);
+  await LocalNotifications.removeDeliveredNotifications({
+    notifications: [{ id: nativeId, title: "", body: "" }],
+  }).catch(() => {});
+
+  // Mark read in notification history store
+  useNotificationStore.getState().markAsRead(notification.id);
 }
 
 export async function syncDeliveredNotificationsToHistory() {
@@ -385,7 +368,7 @@ export async function initializeCapacitorNotificationActions() {
       recordNotificationToHistory(event.notification, true);
 
       if (event.actionId === "complete" && extra) {
-        handleCompleteNotificationAction(extra);
+        void handleCompleteNotificationAction(extra);
       } else {
         if (extra) {
           handleNotificationClick(extra);

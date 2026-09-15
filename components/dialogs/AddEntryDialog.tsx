@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { format } from "date-fns";
 import {
   Plus,
   Trash2,
@@ -29,6 +30,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Entry, WorkItem, Attachment } from "@/types/entry";
 import { useEntryStore } from "@/store/entryStore";
+import { useDraftStore, DraftEntry, isDraftEmpty } from "@/store/draftStore";
 import { motion, AnimatePresence } from "framer-motion";
 import { listVariants, itemVariants } from "@/lib/animations";
 import { saveAttachmentFile, formatFileSize } from "@/src/lib/attachmentStorage";
@@ -59,9 +61,31 @@ interface PendingAttachment {
   previewUrl?: string;
 }
 
-export default function AddEntryDialog() {
-  const [open, setOpen] = useState(false);
+interface AddEntryDialogProps {
+  externalOpen?: boolean;
+  onExternalOpenChange?: (open: boolean) => void;
+  defaultEntryDate?: string; // "YYYY-MM-DD"
+}
+
+export default function AddEntryDialog({
+  externalOpen,
+  onExternalOpenChange,
+  defaultEntryDate,
+}: AddEntryDialogProps = {}) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isExternallyControlled = externalOpen !== undefined;
+  const open = isExternallyControlled ? externalOpen : internalOpen;
+  const setOpen = (value: boolean) => {
+    if (isExternallyControlled) {
+      onExternalOpenChange?.(value);
+    } else {
+      setInternalOpen(value);
+    }
+  };
+
   const addEntry = useEntryStore((state) => state.addEntry);
+  const { draft, saveDraft, clearDraft, hasDraft } = useDraftStore();
+  const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [entryName, setEntryName] = useState("");
   const [subject, setSubject] = useState("");
@@ -74,9 +98,48 @@ export default function AddEntryDialog() {
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const pdfInputRef = useRef<HTMLInputElement>(null);
+  const categoryInputRef = useRef<HTMLInputElement>(null);
+  const detailsInputRef = useRef<HTMLTextAreaElement>(null);
 
   const [previewPhoto, setPreviewPhoto] = useState<PendingAttachment | null>(null);
   const [previewPdf, setPreviewPdf] = useState<PendingAttachment | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      const currentDraft = useDraftStore.getState().draft;
+      if (currentDraft && !isDraftEmpty(currentDraft)) {
+        setEntryName((prev) => (prev ? prev : currentDraft.entryName || ""));
+        setSubject((prev) => (prev ? prev : currentDraft.subject || ""));
+        setLesson((prev) => (prev ? prev : currentDraft.lesson || ""));
+        setNotes((prev) => (prev ? prev : currentDraft.notes || ""));
+        setTags((prev) => (prev.length > 0 ? prev : currentDraft.tags || []));
+        setWorks((prev) => (prev.length > 0 ? prev : currentDraft.works || []));
+        setReminder((prev) => (prev ? prev : currentDraft.reminder));
+      }
+    }
+  }, [open]);
+
+  const debouncedSaveDraft = useCallback(() => {
+    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    draftTimerRef.current = setTimeout(() => {
+      saveDraft({
+        entryName,
+        subject,
+        lesson,
+        notes,
+        tags,
+        works,
+        entryDate: defaultEntryDate,
+        reminder,
+      });
+    }, 500);
+  }, [entryName, subject, lesson, notes, tags, works, defaultEntryDate, reminder, saveDraft]);
+
+  useEffect(() => {
+    if (open) {
+      debouncedSaveDraft();
+    }
+  }, [entryName, subject, lesson, notes, tags, works, reminder, open, debouncedSaveDraft]);
 
   const addWork = () => {
     setWorks((prev) => [...prev, createEmptyWork()]);
@@ -222,6 +285,7 @@ export default function AddEntryDialog() {
         lesson: lesson.trim(),
         notes: notes.trim(),
         createdAt: new Date().toISOString(),
+        entryDate: (defaultEntryDate && defaultEntryDate <= format(new Date(), "yyyy-MM-dd")) ? defaultEntryDate : undefined,
         works,
         attachments: attachmentMetadata.length > 0 ? attachmentMetadata : undefined,
         tags: tags.length > 0 ? tags : undefined,
@@ -229,7 +293,8 @@ export default function AddEntryDialog() {
       };
 
       addEntry(entry);
-      toast.success("Entry created successfully.");
+      clearDraft();
+      toast.success("Entry saved");
 
       resetForm();
       setOpen(false);
@@ -238,6 +303,19 @@ export default function AddEntryDialog() {
       toast.error("Failed to save entry attachments.");
     }
   };
+
+  const recentCategories = useMemo(() => {
+    const entries = useEntryStore.getState().entries;
+    const counts = new Map<string, number>();
+    for (const e of entries) {
+      const cat = e.subject?.trim();
+      if (cat) counts.set(cat, (counts.get(cat) || 0) + 1);
+    }
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name]) => name);
+  }, [open]);
 
   const photoAttachments = useMemo(
     () =>
@@ -262,74 +340,103 @@ export default function AddEntryDialog() {
   return (
     <>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
-          <Button className="h-13 sm:h-14 w-full rounded-2xl bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90 font-semibold text-sm sm:text-base">
-            <Plus className="mr-2 h-5 w-5" />
-            Add Entry
-          </Button>
-        </DialogTrigger>
+        {!isExternallyControlled && (
+          <DialogTrigger asChild>
+            <Button className="h-13 sm:h-14 w-full rounded-2xl bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90 font-semibold text-sm sm:text-base">
+              <Plus className="mr-2 h-5 w-5" />
+              Add Entry
+            </Button>
+          </DialogTrigger>
+        )}
 
-        <DialogContent className="box-border flex max-h-[88vh] w-[calc(100vw-2rem)] max-w-lg flex-col overflow-x-hidden overflow-y-auto border-border bg-popover p-0 sm:max-w-lg">
+        <DialogContent className="box-border flex max-h-[88vh] w-[calc(100vw-2rem)] max-w-lg flex-col overflow-hidden border-border bg-popover p-0 sm:max-w-lg">
           {/* Header */}
-          <DialogHeader className="box-border w-full min-w-0 border-b border-border px-4 pb-3.5 pt-4 pr-12 sm:px-5 sm:pt-5">
+          <DialogHeader className="box-border w-full shrink-0 min-w-0 border-b border-border px-4 pb-3.5 pt-4 pr-12 sm:px-5 sm:pt-5">
             <DialogTitle className="truncate text-lg font-semibold tracking-tight text-foreground sm:text-xl">
               Add New Entry
             </DialogTitle>
-            <p className="text-xs text-muted-foreground sm:text-sm">
-              Capture notes, ideas, tasks and attachments in one place.
-            </p>
           </DialogHeader>
 
-          {/* Form */}
-          <motion.div
-            className="box-border w-full min-w-0 max-w-full space-y-4 px-4 pb-5 pt-3.5 sm:space-y-5 sm:px-5"
-            variants={listVariants}
-            initial="hidden"
-            animate="visible"
-          >
-            {/* Entry Name */}
-            <motion.section variants={itemVariants} className="w-full min-w-0 space-y-1.5">
-              <label className="flex items-center gap-2 text-xs font-medium text-foreground sm:text-sm">
-                <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <span>Entry Name</span>
-              </label>
-              <Input
-                placeholder="e.g. Unit 3 Database Concepts"
-                value={entryName}
-                onChange={(e) => setEntryName(e.target.value)}
-                className="h-11 w-full min-w-0 rounded-xl bg-background text-sm sm:h-12"
-              />
-            </motion.section>
+          {/* Scrollable Form Body */}
+          <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-5">
+            <motion.div
+              className="box-border w-full min-w-0 max-w-full space-y-4 sm:space-y-5"
+              variants={listVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              {/* Title */}
+              <motion.section variants={itemVariants} className="w-full min-w-0 space-y-1.5">
+                <label className="flex items-center gap-2 text-xs font-medium text-foreground sm:text-sm">
+                  <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span>Title</span>
+                </label>
+                <Input
+                  placeholder="Enter title"
+                  value={entryName}
+                  onChange={(e) => setEntryName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      categoryInputRef.current?.focus();
+                    }
+                  }}
+                  className="h-11 w-full min-w-0 rounded-xl bg-background text-sm sm:h-12"
+                  autoFocus
+                />
+              </motion.section>
 
-            {/* Subject */}
-            <motion.section variants={itemVariants} className="w-full min-w-0 space-y-1.5">
-              <label className="flex items-center gap-2 text-xs font-medium text-foreground sm:text-sm">
-                <Tag className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <span>Subject</span>
-              </label>
-              <Input
-                placeholder="e.g. Computer Science"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                className="h-11 w-full min-w-0 rounded-xl bg-background text-sm sm:h-12"
-              />
-            </motion.section>
+              {/* Category */}
+              <motion.section variants={itemVariants} className="w-full min-w-0 space-y-1.5">
+                <label className="flex items-center gap-2 text-xs font-medium text-foreground sm:text-sm">
+                  <Tag className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span>Category</span>
+                </label>
+                <Input
+                  ref={categoryInputRef}
+                  placeholder="Enter category"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      detailsInputRef.current?.focus();
+                    }
+                  }}
+                  className="h-11 w-full min-w-0 rounded-xl bg-background text-sm sm:h-12"
+                />
+                {recentCategories.length > 0 && !subject && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {recentCategories.map((cat) => (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => setSubject(cat)}
+                        className="rounded-lg border border-border bg-secondary/60 px-2.5 py-1 text-[11px] font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-primary/10 hover:text-primary active:scale-95"
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </motion.section>
 
-            {/* Key Notes */}
-            <motion.section variants={itemVariants} className="w-full min-w-0 space-y-1.5">
-              <label className="flex items-center gap-2 text-xs font-medium text-foreground sm:text-sm">
-                <StickyNote className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <span>Key Notes</span>
-              </label>
-              <Textarea
-                placeholder="Summary of today's lesson, important points..."
-                value={lesson}
-                onChange={(e) => setLesson(e.target.value)}
-                className="min-h-24 w-full min-w-0 resize-none rounded-xl bg-background text-sm leading-relaxed sm:min-h-28"
-              />
-            </motion.section>
+              {/* Details */}
+              <motion.section variants={itemVariants} className="w-full min-w-0 space-y-1.5">
+                <label className="flex items-center gap-2 text-xs font-medium text-foreground sm:text-sm">
+                  <StickyNote className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span>Details</span>
+                </label>
+                <Textarea
+                  ref={detailsInputRef}
+                  placeholder="Add details"
+                  value={lesson}
+                  onChange={(e) => setLesson(e.target.value)}
+                  className="min-h-24 w-full min-w-0 resize-none rounded-xl bg-background text-sm leading-relaxed sm:min-h-28"
+                />
+              </motion.section>
 
-            {/* Tags / Categories */}
+            {/* Tags */}
             <motion.section
               variants={itemVariants}
               className="w-full min-w-0 border-t border-border/80 pt-4"
@@ -340,7 +447,7 @@ export default function AddEntryDialog() {
               />
             </motion.section>
 
-            {/* Entry-Level Custom Reminder */}
+            {/* Reminder */}
             <motion.section
               variants={itemVariants}
               className="w-full min-w-0 border-t border-border/80 pt-4"
@@ -348,11 +455,11 @@ export default function AddEntryDialog() {
               <ReminderSection
                 reminder={reminder}
                 onChange={setReminder}
-                title="Custom Reminder"
+                title="Reminder"
               />
             </motion.section>
 
-            {/* Works / Tasks Section */}
+            {/* Tasks Section */}
             <motion.section
               variants={itemVariants}
               className="w-full min-w-0 border-t border-border/80 pt-4"
@@ -361,11 +468,8 @@ export default function AddEntryDialog() {
                 <div className="min-w-0 flex-1">
                   <h3 className="flex items-center gap-2 text-xs font-medium text-foreground sm:text-sm">
                     <ListTodo className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <span className="truncate">Tasks / Assignments</span>
+                    <span className="truncate">Tasks</span>
                   </h3>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    Break this entry down into actionable items.
-                  </p>
                 </div>
 
                 <Button
@@ -400,7 +504,8 @@ export default function AddEntryDialog() {
                         variant="ghost"
                         size="icon"
                         onClick={() => removeWork(work.id)}
-                        className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                        className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                        aria-label={`Remove task ${index + 1}`}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -408,11 +513,17 @@ export default function AddEntryDialog() {
 
                     <div className="mt-2.5 space-y-2.5">
                       <Input
-                        placeholder="e.g. Read chapters 4-6, complete exercises..."
+                        placeholder="Add task (Press Enter for next task)"
                         value={work.task}
                         onChange={(e) =>
                           updateWork(work.id, "task", e.target.value)
                         }
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            addWork();
+                          }
+                        }}
                         className="h-10 w-full min-w-0 rounded-xl bg-card text-sm sm:h-11"
                       />
                     </div>
@@ -422,9 +533,6 @@ export default function AddEntryDialog() {
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-medium text-foreground sm:text-sm">
                           Add to Pending List
-                        </p>
-                        <p className="text-[11px] text-muted-foreground">
-                          Track progress on your dashboard and pending list.
                         </p>
                       </div>
 
@@ -439,7 +547,7 @@ export default function AddEntryDialog() {
                     </label>
 
                     {work.addToPending && (
-                      <div className="mt-3 space-y-1.5">
+                      <div className="mt-3 space-y-2">
                         <label className="flex items-center gap-2 text-xs font-medium text-foreground sm:text-sm">
                           <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" />
                           <span>Deadline</span>
@@ -447,6 +555,47 @@ export default function AddEntryDialog() {
                             (Optional)
                           </span>
                         </label>
+
+                        {/* Quick Deadline Presets */}
+                        <div className="flex flex-wrap gap-1.5">
+                          {[
+                            { label: "Today", value: format(new Date(), "yyyy-MM-dd") },
+                            { label: "Tomorrow", value: format(new Date(Date.now() + 86400000), "yyyy-MM-dd") },
+                            {
+                              label: "Next Week",
+                              value: (() => {
+                                const d = new Date();
+                                d.setDate(d.getDate() + 7);
+                                return format(d, "yyyy-MM-dd");
+                              })(),
+                            },
+                          ].map((preset) => {
+                            const isSelected = work.deadline === preset.value;
+                            return (
+                              <button
+                                key={preset.label}
+                                type="button"
+                                onClick={() => updateWork(work.id, "deadline", preset.value)}
+                                className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition-all active:scale-95 ${
+                                  isSelected
+                                    ? "border-primary bg-primary/10 text-primary font-semibold"
+                                    : "border-border bg-secondary/50 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                                }`}
+                              >
+                                {preset.label}
+                              </button>
+                            );
+                          })}
+                          {work.deadline && (
+                            <button
+                              type="button"
+                              onClick={() => updateWork(work.id, "deadline", "")}
+                              className="rounded-lg border border-border/80 bg-secondary/30 px-2 py-1 text-xs font-medium text-muted-foreground hover:text-destructive active:scale-95"
+                            >
+                              No Deadline
+                            </button>
+                          )}
+                        </div>
 
                         <Input
                           type="date"
@@ -590,45 +739,28 @@ export default function AddEntryDialog() {
                 </div>
               )}
             </motion.section>
+            </motion.div>
+          </div>
 
-            {/* Additional Notes */}
-            <motion.section
-              variants={itemVariants}
-              className="border-t border-border/80 pt-4"
+          {/* Sticky Bottom Actions */}
+          <div className="sticky bottom-0 z-20 flex shrink-0 items-center justify-end gap-2.5 border-t border-border bg-popover/95 px-4 py-3 backdrop-blur-sm sm:px-5">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 rounded-xl px-4 text-xs sm:text-sm font-medium"
+              onClick={() => setOpen(false)}
             >
-              <label className="mb-1.5 flex items-center gap-2 text-xs sm:text-sm font-medium text-foreground">
-                <StickyNote className="h-4 w-4 text-muted-foreground" />
-                Additional Notes
-              </label>
+              Cancel
+            </Button>
 
-              <Textarea
-                placeholder="Anything else worth remembering?"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="min-h-20 sm:min-h-24 resize-none rounded-xl bg-background text-sm leading-relaxed"
-              />
-            </motion.section>
-
-            {/* Actions */}
-            <div className="grid grid-cols-2 gap-2.5 border-t border-border/80 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                className="h-11 rounded-xl text-xs sm:text-sm font-medium"
-                onClick={() => setOpen(false)}
-              >
-                Cancel
-              </Button>
-
-              <Button
-                type="button"
-                className="h-11 rounded-xl bg-primary text-primary-foreground font-semibold text-xs sm:text-sm hover:bg-primary/90"
-                onClick={handleSave}
-              >
-                Save Entry
-              </Button>
-            </div>
-          </motion.div>
+            <Button
+              type="button"
+              className="h-10 rounded-xl bg-primary px-5 text-xs sm:text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 active:scale-[0.98]"
+              onClick={handleSave}
+            >
+              Save Entry
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 

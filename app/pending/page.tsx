@@ -24,7 +24,8 @@ import { Entry } from "@/types/entry";
 import ViewEntryDialog from "@/components/dialogs/ViewEntryDialog";
 import EditEntryDialog from "@/components/dialogs/EditEntryDialog";
 import { motion, AnimatePresence } from "framer-motion";
-import { pageVariants, itemVariants, listVariants } from "@/lib/animations";
+import { pageVariants, itemVariants, listVariants, tabContentVariants } from "@/lib/animations";
+import { toast } from "sonner";
 
 type PendingWorkItem = {
   work: Entry["works"][number];
@@ -40,7 +41,7 @@ function PendingPageContent() {
   const searchParams = useSearchParams();
 
   const entries = useEntryStore((state) => state.entries);
-  const updateEntry = useEntryStore((state) => state.updateEntry);
+  const toggleWorkCompleted = useEntryStore((state) => state.toggleWorkCompleted);
 
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [openView, setOpenView] = useState(false);
@@ -74,8 +75,7 @@ function PendingPageContent() {
     overdueCount +
     dueTodayCount +
     tomorrowCount +
-    remainingCount +
-    (otherImportantTasks?.length || 0);
+    remainingCount;
 
   useEffect(() => {
     if (selectedEntry) {
@@ -133,17 +133,7 @@ function PendingPageContent() {
   }, [searchParams]);
 
   const completeWork = (entryId: string, workId: string) => {
-    const entry = entries.find((item) => item.id === entryId);
-    if (!entry) return;
-
-    const updatedEntry: Entry = {
-      ...entry,
-      works: entry.works.map((work) =>
-        work.id === workId ? { ...work, completed: true } : work,
-      ),
-    };
-
-    updateEntry(updatedEntry);
+    toggleWorkCompleted(entryId, workId);
   };
 
   const renderTaskCard = (item: PendingWorkItem) => {
@@ -182,10 +172,9 @@ function PendingPageContent() {
           <button
             type="button"
             onClick={() => {
-              setSelectedEntry(entry);
-              setOpenView(true);
+              router.push(`/?viewEntry=${entry.id}&workId=${work.id}`);
             }}
-            className="group flex w-full items-start gap-3 rounded-xl text-left transition-colors hover:bg-muted/40"
+            className="group flex w-full items-start gap-3 rounded-xl text-left transition-all hover:bg-muted/40 cursor-pointer active:scale-[0.99]"
           >
             <div
               className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${iconClass}`}
@@ -263,10 +252,9 @@ function PendingPageContent() {
           <button
             type="button"
             onClick={() => {
-              setSelectedEntry(entry);
-              setOpenView(true);
+              router.push(`/?viewEntry=${entry.id}&workId=${work.id}`);
             }}
-            className="group flex w-full items-start gap-3 rounded-xl text-left transition-colors hover:bg-muted/40"
+            className="group flex w-full items-start gap-3 rounded-xl text-left transition-all hover:bg-muted/40 cursor-pointer active:scale-[0.99]"
           >
             <div
               className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
@@ -387,255 +375,274 @@ function PendingPageContent() {
         </div>
 
         {totalPendingCount === 0 ? (
-          <Card className="mt-10 rounded-3xl border-border bg-card">
-            <CardContent className="flex flex-col items-center px-6 py-14 text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-green-500/10">
-                <CheckCircle2 className="h-8 w-8 text-green-400" />
+          <Card className="mt-8 rounded-3xl border-border bg-card shadow-xs">
+            <CardContent className="flex flex-col items-center px-6 py-12 text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-green-500/10">
+                <CheckCircle2 className="h-6 w-6 text-green-500" />
               </div>
 
-              <h2 className="mt-5 text-xl font-semibold">
-                You're all caught up
+              <h2 className="mt-3.5 text-base font-semibold text-foreground">
+                No pending tasks
               </h2>
 
-              <p className="mt-2 max-w-xs text-sm text-muted-foreground">
-                No pending tasks right now. Enjoy the suspiciously peaceful
-                moment 🎉
+              <p className="mt-1 max-w-xs text-xs text-muted-foreground">
+                All tasks are completed.
               </p>
             </CardContent>
           </Card>
         ) : (
           <div className="mt-8">
-            {activeTab === "important" ? (
-              <section className="space-y-8">
-                <div ref={overdueRef}>
-                  <div className="mb-3 flex items-center justify-between">
-                    <h2 className="text-lg font-semibold tracking-tight text-red-400">
-                      🔴 Overdue
-                    </h2>
-                    <span className="rounded-full bg-red-500/10 px-3 py-1 text-xs font-semibold text-red-400">
-                      {overdueCount}
-                    </span>
-                  </div>
-
-                  {overdueTasks.length === 0 ? (
-                    <Card className="rounded-3xl border-border bg-card">
-                      <CardContent className="px-6 py-8 text-sm text-muted-foreground">
-                        No overdue tasks 🎉
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <motion.div className="space-y-4" variants={listVariants}>
-                      <AnimatePresence mode="popLayout">
-                        {overdueTasks.map((item) => (
-                          <motion.div
-                            key={item.work.id}
-                            layout
-                            variants={itemVariants}
-                            initial="hidden"
-                            animate="visible"
-                            exit="exit"
-                          >
-                            {renderTaskCard(item)}
-                          </motion.div>
-                        ))}
-                      </AnimatePresence>
-                    </motion.div>
-                  )}
-                </div>
-
-                <div ref={todayRef}>
-                  <div className="mb-3 flex items-center justify-between">
-                    <h2 className="text-lg font-semibold tracking-tight text-orange-400">
-                      🟠 Due Today
-                    </h2>
-                    <span className="rounded-full bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-400">
-                      {dueTodayCount}
-                    </span>
-                  </div>
-
-                  {dueTodayTasks.length === 0 ? (
-                    <Card className="rounded-3xl border-border bg-card">
-                      <CardContent className="px-6 py-8 text-sm text-muted-foreground">
-                        Nothing due today.
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <motion.div className="space-y-4" variants={listVariants}>
-                      <AnimatePresence mode="popLayout">
-                        {dueTodayTasks.map((item) => (
-                          <motion.div
-                            key={item.work.id}
-                            layout
-                            variants={itemVariants}
-                            initial="hidden"
-                            animate="visible"
-                            exit="exit"
-                          >
-                            {renderTaskCard(item)}
-                          </motion.div>
-                        ))}
-                      </AnimatePresence>
-                    </motion.div>
-                  )}
-                </div>
-
-                <div ref={tomorrowRef}>
-                  <div className="mb-3 flex items-center justify-between">
-                    <h2 className="text-lg font-semibold tracking-tight text-yellow-400">
-                      🟡 Tomorrow
-                    </h2>
-                    <span className="rounded-full bg-yellow-500/10 px-3 py-1 text-xs font-semibold text-yellow-400">
-                      {tomorrowCount}
-                    </span>
-                  </div>
-
-                  {tomorrowTasks.length === 0 ? (
-                    <Card className="rounded-3xl border-border bg-card">
-                      <CardContent className="px-6 py-8 text-sm text-muted-foreground">
-                        Nothing scheduled for tomorrow.
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <motion.div className="space-y-4" variants={listVariants}>
-                      <AnimatePresence mode="popLayout">
-                        {tomorrowTasks.map((item) => (
-                          <motion.div
-                            key={item.work.id}
-                            layout
-                            variants={itemVariants}
-                            initial="hidden"
-                            animate="visible"
-                            exit="exit"
-                          >
-                            {renderTaskCard(item)}
-                          </motion.div>
-                        ))}
-                      </AnimatePresence>
-                    </motion.div>
-                  )}
-                </div>
-
-                <div ref={remainingRef}>
-                  <div className="mb-3 flex items-center justify-between">
-                    <h2 className="text-lg font-semibold tracking-tight text-blue-400">
-                      🔵 Remaining
-                    </h2>
-                    <span className="rounded-full bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-400">
-                      {remainingCount}
-                    </span>
-                  </div>
-
-                  {remainingTasks.length === 0 ? (
-                    <Card className="rounded-3xl border-border bg-card">
-                      <CardContent className="px-6 py-8 text-sm text-muted-foreground">
-                        No remaining scheduled tasks.
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <motion.div className="space-y-4" variants={listVariants}>
-                      <AnimatePresence mode="popLayout">
-                        {remainingTasks.map((item) => (
-                          <motion.div
-                            key={item.work.id}
-                            layout
-                            variants={itemVariants}
-                            initial="hidden"
-                            animate="visible"
-                            exit="exit"
-                          >
-                            {renderTaskCard(item)}
-                          </motion.div>
-                        ))}
-                      </AnimatePresence>
-                    </motion.div>
-                  )}
-                </div>
-              </section>
-            ) : (
-              <section className="space-y-8">
-                <div ref={otherRef}>
-                  <div className="mb-3 flex items-center justify-between">
-                    <h2 className="text-lg font-semibold tracking-tight">
-                      Other Tasks
-                    </h2>
-                    <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-secondary-foreground">
-                      {otherTasksCount}
-                    </span>
-                  </div>
-
-                  {otherImportantTasks.length === 0 &&
-                  normalTasks.length === 0 ? (
-                    <Card className="rounded-3xl border-border bg-card">
-                      <CardContent className="px-6 py-8 text-sm text-muted-foreground">
-                        No other tasks right now.
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <div className="space-y-4">
-                      {otherImportantTasks.length > 0 && (
-                        <Card className="rounded-3xl border border-border bg-card">
-                          <CardContent className="p-5">
-                            <h3 className="text-sm font-semibold text-foreground">
-                              Important Tasks without Deadline
-                            </h3>
-
-                            <motion.div
-                              className="mt-4 space-y-4"
-                              variants={listVariants}
-                            >
-                              <AnimatePresence mode="popLayout">
-                                {otherImportantTasks.map(({ work, entry }) => (
-                                  <motion.div
-                                    key={work.id}
-                                    layout
-                                    variants={itemVariants}
-                                    initial="hidden"
-                                    animate="visible"
-                                    exit="exit"
-                                  >
-                                    {renderSimpleTaskCard(work, entry, true)}
-                                  </motion.div>
-                                ))}
-                              </AnimatePresence>
-                            </motion.div>
-                          </CardContent>
-                        </Card>
-                      )}
-
-                      {normalTasks.length > 0 && (
-                        <Card className="rounded-3xl border border-border bg-card">
-                          <CardContent className="p-5">
-                            <h3 className="text-sm font-semibold text-foreground">
-                              Normal Tasks
-                            </h3>
-
-                            <motion.div
-                              className="mt-4 space-y-4"
-                              variants={listVariants}
-                            >
-                              <AnimatePresence mode="popLayout">
-                                {normalTasks.map(({ work, entry }) => (
-                                  <motion.div
-                                    key={work.id}
-                                    layout
-                                    variants={itemVariants}
-                                    initial="hidden"
-                                    animate="visible"
-                                    exit="exit"
-                                  >
-                                    {renderSimpleTaskCard(work, entry, false)}
-                                  </motion.div>
-                                ))}
-                              </AnimatePresence>
-                            </motion.div>
-                          </CardContent>
-                        </Card>
-                      )}
+            <AnimatePresence mode="wait">
+              {activeTab === "important" ? (
+                <motion.section
+                  key="important"
+                  variants={tabContentVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  className="space-y-8"
+                >
+                  <div ref={overdueRef}>
+                    <div className="mb-3 flex items-center justify-between">
+                      <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-red-400">
+                        <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-500 shrink-0" />
+                        <span>Overdue</span>
+                      </h2>
+                      <span className="rounded-full bg-red-500/10 px-3 py-1 text-xs font-semibold text-red-400">
+                        {overdueCount}
+                      </span>
                     </div>
-                  )}
-                </div>
-              </section>
-            )}
+
+                    {overdueTasks.length === 0 ? (
+                      <Card className="rounded-2xl border-border bg-card shadow-xs">
+                        <CardContent className="p-4 text-center text-xs text-muted-foreground">
+                          No overdue tasks.
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      <motion.div className="space-y-4" variants={listVariants}>
+                        <AnimatePresence mode="popLayout">
+                          {overdueTasks.map((item) => (
+                            <motion.div
+                              key={item.work.id}
+                              layout
+                              variants={itemVariants}
+                              initial="hidden"
+                              animate="visible"
+                              exit="exit"
+                            >
+                              {renderTaskCard(item)}
+                            </motion.div>
+                          ))}
+                        </AnimatePresence>
+                      </motion.div>
+                    )}
+                  </div>
+
+                  <div ref={todayRef}>
+                    <div className="mb-3 flex items-center justify-between">
+                      <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-orange-400">
+                        <span className="inline-block h-2.5 w-2.5 rounded-full bg-orange-500 shrink-0" />
+                        <span>Due Today</span>
+                      </h2>
+                      <span className="rounded-full bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-400">
+                        {dueTodayCount}
+                      </span>
+                    </div>
+
+                    {dueTodayTasks.length === 0 ? (
+                      <Card className="rounded-2xl border-border bg-card shadow-xs">
+                        <CardContent className="p-4 text-center text-xs text-muted-foreground">
+                          No tasks due today.
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      <motion.div className="space-y-4" variants={listVariants}>
+                        <AnimatePresence mode="popLayout">
+                          {dueTodayTasks.map((item) => (
+                            <motion.div
+                              key={item.work.id}
+                              layout
+                              variants={itemVariants}
+                              initial="hidden"
+                              animate="visible"
+                              exit="exit"
+                            >
+                              {renderTaskCard(item)}
+                            </motion.div>
+                          ))}
+                        </AnimatePresence>
+                      </motion.div>
+                    )}
+                  </div>
+
+                  <div ref={tomorrowRef}>
+                    <div className="mb-3 flex items-center justify-between">
+                      <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-yellow-400">
+                        <span className="inline-block h-2.5 w-2.5 rounded-full bg-yellow-500 shrink-0" />
+                        <span>Tomorrow</span>
+                      </h2>
+                      <span className="rounded-full bg-yellow-500/10 px-3 py-1 text-xs font-semibold text-yellow-400">
+                        {tomorrowCount}
+                      </span>
+                    </div>
+
+                    {tomorrowTasks.length === 0 ? (
+                      <Card className="rounded-2xl border-border bg-card shadow-xs">
+                        <CardContent className="p-4 text-center text-xs text-muted-foreground">
+                          No tasks due tomorrow.
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      <motion.div className="space-y-4" variants={listVariants}>
+                        <AnimatePresence mode="popLayout">
+                          {tomorrowTasks.map((item) => (
+                            <motion.div
+                              key={item.work.id}
+                              layout
+                              variants={itemVariants}
+                              initial="hidden"
+                              animate="visible"
+                              exit="exit"
+                            >
+                              {renderTaskCard(item)}
+                            </motion.div>
+                          ))}
+                        </AnimatePresence>
+                      </motion.div>
+                    )}
+                  </div>
+
+                  <div ref={remainingRef}>
+                    <div className="mb-3 flex items-center justify-between">
+                      <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-blue-400">
+                        <span className="inline-block h-2.5 w-2.5 rounded-full bg-blue-500 shrink-0" />
+                        <span>Remaining</span>
+                      </h2>
+                      <span className="rounded-full bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-400">
+                        {remainingCount}
+                      </span>
+                    </div>
+
+                    {remainingTasks.length === 0 ? (
+                      <Card className="rounded-2xl border-border bg-card shadow-xs">
+                        <CardContent className="p-4 text-center text-xs text-muted-foreground">
+                          No remaining tasks.
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      <motion.div className="space-y-4" variants={listVariants}>
+                        <AnimatePresence mode="popLayout">
+                          {remainingTasks.map((item) => (
+                            <motion.div
+                              key={item.work.id}
+                              layout
+                              variants={itemVariants}
+                              initial="hidden"
+                              animate="visible"
+                              exit="exit"
+                            >
+                              {renderTaskCard(item)}
+                            </motion.div>
+                          ))}
+                        </AnimatePresence>
+                      </motion.div>
+                    )}
+                  </div>
+                </motion.section>
+              ) : (
+                <motion.section
+                  key="other"
+                  variants={tabContentVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  className="space-y-8"
+                >
+                  <div ref={otherRef}>
+                    <div className="mb-3 flex items-center justify-between">
+                      <h2 className="text-lg font-semibold tracking-tight">
+                        Other Tasks
+                      </h2>
+                      <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-secondary-foreground">
+                        {otherTasksCount}
+                      </span>
+                    </div>
+
+                    {otherImportantTasks.length === 0 &&
+                    normalTasks.length === 0 ? (
+                      <Card className="rounded-2xl border-border bg-card shadow-xs">
+                        <CardContent className="p-4 text-center text-xs text-muted-foreground">
+                          No other tasks.
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      <div className="space-y-4">
+                        {otherImportantTasks.length > 0 && (
+                          <Card className="rounded-3xl border border-border bg-card">
+                            <CardContent className="p-5">
+                              <h3 className="text-sm font-semibold text-foreground">
+                                Important Tasks without Deadline
+                              </h3>
+
+                              <motion.div
+                                className="mt-4 space-y-4"
+                                variants={listVariants}
+                              >
+                                <AnimatePresence mode="popLayout">
+                                  {otherImportantTasks.map(({ work, entry }) => (
+                                    <motion.div
+                                      key={work.id}
+                                      layout
+                                      variants={itemVariants}
+                                      initial="hidden"
+                                      animate="visible"
+                                      exit="exit"
+                                    >
+                                      {renderSimpleTaskCard(work, entry, true)}
+                                    </motion.div>
+                                  ))}
+                                </AnimatePresence>
+                              </motion.div>
+                            </CardContent>
+                          </Card>
+                        )}
+
+                        {normalTasks.length > 0 && (
+                          <Card className="rounded-3xl border border-border bg-card">
+                            <CardContent className="p-5">
+                              <h3 className="text-sm font-semibold text-foreground">
+                                Normal Tasks
+                              </h3>
+
+                              <motion.div
+                                className="mt-4 space-y-4"
+                                variants={listVariants}
+                              >
+                                <AnimatePresence mode="popLayout">
+                                  {normalTasks.map(({ work, entry }) => (
+                                    <motion.div
+                                      key={work.id}
+                                      layout
+                                      variants={itemVariants}
+                                      initial="hidden"
+                                      animate="visible"
+                                      exit="exit"
+                                    >
+                                      {renderSimpleTaskCard(work, entry, false)}
+                                    </motion.div>
+                                  ))}
+                                </AnimatePresence>
+                              </motion.div>
+                            </CardContent>
+                          </Card>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </motion.section>
+              )}
+            </AnimatePresence>
           </div>
         )}
 

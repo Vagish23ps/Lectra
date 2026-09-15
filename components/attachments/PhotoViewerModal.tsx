@@ -57,11 +57,18 @@ export default function PhotoViewerModal({
       setError(null);
 
       try {
-        const blob = await getAttachmentFile(attachment.id);
+        let blob: Blob | null = (attachment as any)?.file instanceof Blob ? (attachment as any).file : null;
+        if (!blob && attachment?.id) {
+          blob = await getAttachmentFile(attachment.id);
+        }
+        if (!blob && previewUrl) {
+          const res = await fetch(previewUrl);
+          blob = await res.blob();
+        }
         if (!isMounted) return;
 
         if (!blob) {
-          setError("Photo file could not be loaded from device storage.");
+          setError("Attachment unavailable");
           setLoading(false);
           return;
         }
@@ -111,14 +118,11 @@ export default function PhotoViewerModal({
         fileName,
         attachment?.mimeType || "image/jpeg"
       );
-      if (res.method === "share") {
-        // Shared via native Android sheet
-      } else {
-        toast.success("Image saved.");
+      toast.success(`File saved\n${fileName}\nLocation: ${res.destination}`);
+    } catch (err: any) {
+      if (err?.message !== "Save cancelled by user.") {
+        toast.error(`Could not save file\n${err?.message || "Storage error"}`);
       }
-    } catch (err) {
-      console.error("Save photo error:", err);
-      toast.error("Failed to save image.");
     }
   };
 

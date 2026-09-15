@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import BottomNav from "@/components/shared/BottomNav";
 import NotificationProvider from "@/src/notifications/provider";
 import AndroidBackHandler from "@/components/shared/AndroidBackHandler";
+import PageSwipeHandler from "@/components/shared/PageSwipeHandler";
 import ThemeProvider from "@/components/theme/ThemeProvider";
 import { Sonner } from "@/components/ui/sonner";
 
@@ -60,6 +61,7 @@ export default function RootLayout({
         <ThemeProvider />
         <NotificationProvider />
         <AndroidBackHandler />
+        <PageSwipeHandler />
 
         <div className="flex-1 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-[calc(5.25rem+env(safe-area-inset-bottom,0px))]">
           {children}

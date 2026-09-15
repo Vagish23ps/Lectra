@@ -33,6 +33,7 @@ export default function ReminderConfigModal({
   onSave,
   title = "Set Reminder",
 }: ReminderConfigModalProps) {
+  const [name, setName] = useState<string>("");
   const [type, setType] = useState<"one-time" | "recurring">("one-time");
   const [time, setTime] = useState<string>("09:00");
   const [date, setDate] = useState<string>("");
@@ -46,6 +47,7 @@ export default function ReminderConfigModal({
     if (open) {
       setError("");
       if (initialReminder) {
+        setName(initialReminder.name || "");
         setType(initialReminder.type || "one-time");
         setTime(initialReminder.time || "09:00");
         setDate(initialReminder.date || format(new Date(), "yyyy-MM-dd"));
@@ -65,6 +67,7 @@ export default function ReminderConfigModal({
         const nextHour = new Date(now.getTime() + 60 * 60 * 1000);
         const nextTimeStr = `${String(nextHour.getHours()).padStart(2, "0")}:00`;
 
+        setName("");
         setType("one-time");
         setTime(nextTimeStr);
         setDate(format(now, "yyyy-MM-dd"));
@@ -92,6 +95,7 @@ export default function ReminderConfigModal({
   // Construct draft reminder for preview and saving
   const draftReminder: CustomReminder = {
     id: initialReminder?.id || crypto.randomUUID(),
+    name: name.trim() || undefined,
     enabled: initialReminder?.enabled ?? true,
     type,
     time: time || "09:00",
@@ -162,6 +166,15 @@ export default function ReminderConfigModal({
         </DialogHeader>
 
         <div className="box-border w-full min-w-0 space-y-4">
+          {/* Reminder Name Input */}
+          <Input
+            type="text"
+            placeholder="Reminder name (optional)"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="h-11 rounded-xl bg-secondary/40 text-sm font-medium"
+          />
+
           {/* Type Toggle: One-Time vs Recurring */}
           <div className="grid grid-cols-2 gap-2 rounded-2xl bg-secondary/60 p-1">
             <button
@@ -221,6 +234,26 @@ export default function ReminderConfigModal({
                 <Calendar className="h-3.5 w-3.5" />
                 Reminder Date
               </label>
+              <div className="mb-2.5 flex gap-2">
+                {[
+                  { label: "Today", value: format(new Date(), "yyyy-MM-dd") },
+                  { label: "Tomorrow", value: format(new Date(Date.now() + 86400000), "yyyy-MM-dd") },
+                  { label: "Next Week", value: (() => { const d = new Date(); d.setDate(d.getDate() + 7); return format(d, "yyyy-MM-dd"); })() },
+                ].map((preset) => (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => { setDate(preset.value); setError(""); }}
+                    className={`flex-1 rounded-xl border px-2 py-2 text-xs font-semibold transition-all ${
+                      date === preset.value
+                        ? "border-primary bg-primary/10 text-primary shadow-xs"
+                        : "border-border bg-secondary/30 text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
               <Input
                 type="date"
                 min={format(new Date(), "yyyy-MM-dd")}

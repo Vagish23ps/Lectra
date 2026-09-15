@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { Tag } from "@/types/tag";
+import { useEntryStore } from "@/store/entryStore";
 
 export const DEFAULT_TAGS: Tag[] = [
   { id: "personal", name: "Personal", isDefault: true },
@@ -14,6 +15,8 @@ export const DEFAULT_TAGS: Tag[] = [
   { id: "reminder", name: "Reminder", isDefault: true },
   { id: "college", name: "College", isDefault: true },
   { id: "assignment", name: "Assignment", isDefault: true },
+  { id: "course", name: "Course", isDefault: true },
+  { id: "exam", name: "Exam", isDefault: true },
 ];
 
 interface TagStore {
@@ -106,6 +109,33 @@ export const useTagStore = create<TagStore>()(
     }),
     {
       name: "lectra-tags-storage",
+      onRehydrateStorage: () => {
+        return (state) => {
+          if (state?.customTags && state.customTags.length > 0) {
+            const courseCustom = state.customTags.find(
+              (t) => t.name.toLowerCase() === "course"
+            );
+            const examCustom = state.customTags.find(
+              (t) => t.name.toLowerCase() === "exam"
+            );
+
+            if (courseCustom) {
+              useEntryStore.getState().replaceTagInAllEntries(courseCustom.id, "course");
+            }
+            if (examCustom) {
+              useEntryStore.getState().replaceTagInAllEntries(examCustom.id, "exam");
+            }
+
+            if (courseCustom || examCustom) {
+              state.customTags = state.customTags.filter(
+                (t) =>
+                  t.name.toLowerCase() !== "course" &&
+                  t.name.toLowerCase() !== "exam"
+              );
+            }
+          }
+        };
+      },
     },
   ),
 );

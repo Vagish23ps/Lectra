@@ -1,11 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { X, Download, FileText, Loader2, AlertCircle } from "lucide-react";
+import {
+  X,
+  Download,
+  FileText,
+  Loader2,
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Attachment } from "@/types/entry";
-import { getAttachmentFile, exportAttachmentFile, formatFileSize } from "@/src/lib/attachmentStorage";
+import {
+  getAttachmentFile,
+  exportAttachmentFile,
+  formatFileSize,
+} from "@/src/lib/attachmentStorage";
 import { toast } from "sonner";
 
 interface PdfViewerModalProps {
@@ -22,71 +37,156 @@ export default function PdfViewerModal({
   previewUrl,
 }: PdfViewerModalProps) {
   const [mounted, setMounted] = useState(false);
-  const [objectUrl, setObjectUrl] = useState<string | null>(previewUrl || null);
-  const [loading, setLoading] = useState(!previewUrl);
+  const [loading, setLoading] = useState(true);
+  const [rendering, setRendering] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [pdfDoc, setPdfDoc] = useState<any>(null);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [numPages, setNumPages] = useState<number>(0);
+  const [zoomScale, setZoomScale] = useState<number>(1.2);
+  const [activeBlob, setActiveBlob] = useState<Blob | null>(null);
+
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const renderTaskRef = useRef<any>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  // Load PDF Document when Modal Opens
   useEffect(() => {
-    if (!open) return;
-
-    if (previewUrl) {
-      setObjectUrl(previewUrl);
-      setLoading(false);
+    if (!open) {
+      setPdfDoc(null);
+      setCurrentPage(1);
+      setNumPages(0);
+      setActiveBlob(null);
+      setError(null);
       return;
     }
 
-    let activeUrl: string | null = null;
-    let isMounted = true;
+    let isCancelled = false;
 
     async function loadPdf() {
-      if (!attachment) {
-        setObjectUrl(null);
-        setLoading(false);
-        return;
-      }
-
       setLoading(true);
       setError(null);
 
       try {
-        const blob = await getAttachmentFile(attachment.id);
-        if (!isMounted) return;
+        let blob: Blob | null = (attachment as any)?.file instanceof Blob ? (attachment as any).file : null;
+        if (!blob && attachment?.id) {
+          blob = await getAttachmentFile(attachment.id);
+        }
+        if (!blob && previewUrl) {
+          const res = await fetch(previewUrl);
+          blob = await res.blob();
+        }
 
-        if (!blob) {
-          setError("PDF document could not be loaded from device storage.");
+        if (isCancelled) return;
+
+        if (!blob || blob.size === 0) {
+          setError("Attachment unavailable");
           setLoading(false);
           return;
         }
 
-        // Ensure proper MIME type on the blob
-        const pdfBlob =
-          blob.type === "application/pdf"
-            ? blob
-            : new Blob([blob], { type: "application/pdf" });
+        setActiveBlob(blob);
 
-        activeUrl = URL.createObjectURL(pdfBlob);
-        setObjectUrl(activeUrl);
-      } catch (err) {
-        console.error("Error loading PDF viewer:", err);
-        if (isMounted) setError("Failed to load PDF document.");
+        const arrayBuffer = await blob.arrayBuffer();
+        if (isCancelled) return;
+
+        // Dynamically import pdfjs
+        const pdfjsLib = await import("pdfjs-dist/build/pdf.mjs");
+        if (typeof window !== "undefined" && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+          pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+        }
+
+        const loadingTask = pdfjsLib.getDocument({
+          data: new Uint8Array(arrayBuffer),
+        });
+
+        const doc = await loadingTask.promise;
+        if (isCancelled) return;
+
+        setPdfDoc(doc);
+        setNumPages(doc.numPages);
+        setCurrentPage(1);
+      } catch (err: any) {
+        console.error("PDF.js loading error:", err);
+        if (!isCancelled) {
+          setError(err?.message || "Failed to parse and load PDF document.");
+        }
       } finally {
-        if (isMounted) setLoading(false);
+        if (!isCancelled) {
+          setLoading(false);
+        }
       }
     }
 
     void loadPdf();
 
     return () => {
-      isMounted = false;
-      if (activeUrl) {
-        URL.revokeObjectURL(activeUrl);
-      }
+      isCancelled = true;
     };
   }, [open, attachment, previewUrl]);
+
+  // Render Page to Canvas
+  const renderCurrentPage = useCallback(async () => {
+    if (!pdfDoc || !canvasRef.current || currentPage < 1 || currentPage > numPages) {
+      return;
+    }
+
+    // Cancel in-flight render task if any
+    if (renderTaskRef.current) {
+      try {
+        renderTaskRef.current.cancel();
+      } catch {}
+    }
+
+    setRendering(true);
+
+    try {
+      const page = await pdfDoc.getPage(currentPage);
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      const viewport = page.getViewport({ scale: zoomScale });
+      const outputScale = window.devicePixelRatio || 1;
+
+      canvas.width = Math.floor(viewport.width * outputScale);
+      canvas.height = Math.floor(viewport.height * outputScale);
+      canvas.style.width = `${Math.floor(viewport.width)}px`;
+      canvas.style.height = `${Math.floor(viewport.height)}px`;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      ctx.save();
+      ctx.scale(outputScale, outputScale);
+
+      const renderContext = {
+        canvasContext: ctx,
+        viewport,
+      };
+
+      const renderTask = page.render(renderContext);
+      renderTaskRef.current = renderTask;
+
+      await renderTask.promise;
+      ctx.restore();
+    } catch (err: any) {
+      if (err?.name !== "RenderingCancelledException") {
+        console.error("Canvas PDF render error:", err);
+      }
+    } finally {
+      setRendering(false);
+    }
+  }, [pdfDoc, currentPage, numPages, zoomScale]);
+
+  useEffect(() => {
+    if (pdfDoc && !loading) {
+      void renderCurrentPage();
+    }
+  }, [pdfDoc, loading, currentPage, zoomScale, renderCurrentPage]);
 
   if (!open || !mounted || typeof document === "undefined") return null;
   if (!attachment && !previewUrl) return null;
@@ -94,29 +194,43 @@ export default function PdfViewerModal({
   const fileName = attachment?.name || "PDF Document";
   const fileSize = attachment ? formatFileSize(attachment.size) : "";
 
-  const handleDownload = async () => {
+  const handlePrevPage = () => {
+    setCurrentPage((prev) => Math.max(prev - 1, 1));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage((prev) => Math.min(prev + 1, numPages));
+  };
+
+  const handleZoomIn = () => {
+    setZoomScale((prev) => Math.min(prev + 0.25, 3.0));
+  };
+
+  const handleZoomOut = () => {
+    setZoomScale((prev) => Math.max(prev - 0.25, 0.6));
+  };
+
+  const handleResetZoom = () => {
+    setZoomScale(1.2);
+  };
+
+  const handleSave = async () => {
     try {
-      let blob: Blob | null = null;
-      if (attachment?.id) {
+      let blob = activeBlob;
+      if (!blob && attachment?.id) {
         blob = await getAttachmentFile(attachment.id);
-      }
-      if (!blob && objectUrl) {
-        const res = await fetch(objectUrl);
-        blob = await res.blob();
       }
       if (!blob) {
         toast.error("Could not retrieve PDF data to save.");
         return;
       }
+
       const res = await exportAttachmentFile(blob, fileName, "application/pdf");
-      if (res.method === "share") {
-        // Shared via native Android sheet
-      } else {
-        toast.success("PDF saved.");
+      toast.success(`File saved\n${fileName}\nLocation: ${res.destination}`);
+    } catch (err: any) {
+      if (err?.message !== "Save cancelled by user.") {
+        toast.error(`Could not save file\n${err?.message || "Storage error"}`);
       }
-    } catch (err) {
-      console.error("Save PDF error:", err);
-      toast.error("Failed to save PDF document.");
     }
   };
 
@@ -125,40 +239,113 @@ export default function PdfViewerModal({
       role="dialog"
       aria-modal="true"
       aria-label={fileName}
-      className="fixed inset-0 z-[100] flex h-[100dvh] w-screen flex-col bg-background/95 text-foreground backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-[100] flex h-[100dvh] w-screen flex-col bg-background text-foreground backdrop-blur-md animate-in fade-in duration-200"
     >
-      {/* Top Safe-Area Clearance & Toolbar */}
-      <div className="flex w-full items-center justify-between border-b border-border bg-card/80 px-4 pb-3 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] shadow-xs">
-        <div className="flex min-w-0 flex-1 items-center gap-2.5 pr-3">
+      {/* Top Toolbar */}
+      <div className="flex w-full flex-wrap items-center justify-between border-b border-border bg-card/90 px-3 pb-2.5 pt-[calc(env(safe-area-inset-top,0px)+0.6rem)] shadow-xs sm:px-4">
+        {/* Title and Metadata */}
+        <div className="flex min-w-0 flex-1 items-center gap-2.5 pr-2">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-500/10 text-red-500">
             <FileText className="h-5 w-5" />
           </div>
           <div className="min-w-0 flex-1 overflow-hidden">
-            <h2 className="truncate text-sm font-semibold text-foreground">
+            <h2 className="truncate text-xs font-semibold text-foreground sm:text-sm">
               {fileName}
             </h2>
-            {fileSize && (
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                {fileSize} • PDF Document
-              </p>
-            )}
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              {fileSize ? `${fileSize} • ` : ""}
+              {numPages > 0 ? `Page ${currentPage} of ${numPages}` : "PDF Document"}
+            </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {objectUrl && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleDownload}
-              className="h-8 gap-1.5 rounded-xl border-border bg-background px-3 text-xs text-foreground shadow-xs hover:bg-secondary"
-            >
-              <Download className="h-3.5 w-3.5" />
-              <span>Save</span>
-            </Button>
+        {/* Toolbar Action Buttons */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Page Navigation */}
+          {numPages > 1 && (
+            <div className="flex items-center rounded-xl border border-border bg-background p-0.5 shadow-xs">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={handlePrevPage}
+                disabled={currentPage <= 1}
+                className="h-7 w-7 rounded-lg text-foreground hover:bg-secondary disabled:opacity-30"
+                title="Previous Page"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="px-2 text-[11px] font-semibold text-muted-foreground">
+                {currentPage}/{numPages}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={handleNextPage}
+                disabled={currentPage >= numPages}
+                className="h-7 w-7 rounded-lg text-foreground hover:bg-secondary disabled:opacity-30"
+                title="Next Page"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           )}
 
+          {/* Zoom Controls */}
+          {numPages > 0 && (
+            <div className="hidden items-center rounded-xl border border-border bg-background p-0.5 shadow-xs sm:flex">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={handleZoomOut}
+                disabled={zoomScale <= 0.6}
+                className="h-7 w-7 rounded-lg text-foreground hover:bg-secondary disabled:opacity-30"
+                title="Zoom Out"
+              >
+                <ZoomOut className="h-3.5 w-3.5" />
+              </Button>
+              <span className="px-1.5 text-[11px] font-medium text-muted-foreground">
+                {Math.round(zoomScale * 100)}%
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={handleZoomIn}
+                disabled={zoomScale >= 3.0}
+                className="h-7 w-7 rounded-lg text-foreground hover:bg-secondary disabled:opacity-30"
+                title="Zoom In"
+              >
+                <ZoomIn className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={handleResetZoom}
+                className="h-7 w-7 rounded-lg text-foreground hover:bg-secondary"
+                title="Reset Zoom"
+              >
+                <RotateCcw className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
+
+          {/* Save Button */}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleSave}
+            className="h-8 gap-1.5 rounded-xl border-border bg-background px-2.5 text-xs text-foreground shadow-xs hover:bg-secondary sm:px-3"
+          >
+            <Download className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Save</span>
+          </Button>
+
+          {/* Close Button */}
           <Button
             type="button"
             variant="ghost"
@@ -173,55 +360,41 @@ export default function PdfViewerModal({
         </div>
       </div>
 
-      {/* PDF Content Area */}
-      <div className="relative flex flex-1 flex-col items-center justify-center overflow-hidden bg-muted/20 p-2 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] sm:p-4">
+      {/* PDF Canvas Viewport Container */}
+      <div className="relative flex flex-1 items-start justify-center overflow-auto bg-muted/40 p-2 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] sm:p-4">
         {loading ? (
-          <div className="flex flex-col items-center gap-2 text-muted-foreground">
+          <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm">Loading PDF document...</p>
+            <p className="text-xs sm:text-sm font-medium">Rendering PDF...</p>
           </div>
         ) : error ? (
-          <div className="flex max-w-sm flex-col items-center gap-3 p-6 text-center text-red-400">
+          <div className="flex max-w-sm flex-col items-center justify-center gap-3 p-6 text-center text-red-400">
             <AlertCircle className="h-8 w-8" />
-            <p className="text-sm font-medium">{error}</p>
-            {objectUrl && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleDownload}
-                className="rounded-xl border-border text-xs"
-              >
-                <Download className="mr-1.5 h-3.5 w-3.5" />
-                Download File
-              </Button>
+            <p className="text-xs sm:text-sm font-medium">{error}</p>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleSave}
+              className="mt-2 rounded-xl border-border text-xs"
+            >
+              <Download className="mr-1.5 h-3.5 w-3.5" />
+              Export PDF to Device
+            </Button>
+          </div>
+        ) : (
+          <div className="flex min-h-full flex-col items-center justify-center py-2">
+            {rendering && (
+              <div className="absolute right-4 top-4 z-10 flex items-center gap-1.5 rounded-lg bg-background/80 px-2 py-1 text-[11px] font-medium text-muted-foreground shadow-xs backdrop-blur-xs">
+                <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                <span>Updating...</span>
+              </div>
             )}
-          </div>
-        ) : objectUrl ? (
-          <div className="flex h-full w-full flex-col items-center gap-2">
-            <iframe
-              src={`${objectUrl}#view=FitH`}
-              title={fileName}
-              className="h-full w-full flex-1 rounded-2xl border border-border bg-white shadow-md"
+            <canvas
+              ref={canvasRef}
+              className="rounded-xl border border-border bg-white shadow-xl transition-all"
             />
-
-            {/* Mobile Fallback Helper */}
-            <div className="flex w-full items-center justify-between gap-2 rounded-xl border border-border bg-card/90 px-3 py-2 text-xs shadow-xs">
-              <span className="text-muted-foreground">
-                PDF document loaded ({fileSize})
-              </span>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={handleDownload}
-                className="h-7 gap-1 rounded-lg px-2 text-xs font-semibold text-primary hover:bg-primary/10"
-              >
-                <Download className="h-3 w-3" />
-                <span>Download / Open</span>
-              </Button>
-            </div>
           </div>
-        ) : null}
+        )}
       </div>
     </div>,
     document.body

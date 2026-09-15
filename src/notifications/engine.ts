@@ -45,15 +45,40 @@ function generateCustomReminderNotifications(
   const isTask = !!work;
   const targetId = isTask ? work.id : entry.id;
   const idPrefix = isTask ? `custom-task` : `custom-entry`;
-  const title = isTask ? "🔔 Task Reminder" : "🔔 Reminder";
+  const title = reminder.name?.trim() || (isTask ? "Task Reminder" : "Reminder");
   const body = isTask
     ? (work.task.trim() || "Task Reminder")
     : (entry.entryName.trim() || entry.subject.trim() || "Entry Reminder");
 
   const [hour, minute] = (reminder.time || "09:00").split(":").map(Number);
 
+  const snoozedAt = reminder.snoozedUntil
+    ? new Date(reminder.snoozedUntil).getTime()
+    : null;
+  const isCurrentlySnoozed = snoozedAt !== null && snoozedAt > now;
+
+  if (isCurrentlySnoozed) {
+    notifications.push({
+      id: `${idPrefix}-snoozed-${targetId}`,
+      type: "custom-reminder",
+      title: `${title} (Snoozed)`,
+      body,
+      scheduledAt: snoozedAt,
+      priority: "normal",
+      entryId: entry.id,
+      workId: isTask ? work.id : undefined,
+      customReminder: reminder,
+      read: false,
+      createdAt: now,
+    });
+
+    if (reminder.type === "one-time") {
+      return notifications;
+    }
+  }
+
   if (reminder.type === "one-time") {
-    if (!reminder.date) return [];
+    if (!reminder.date) return notifications;
     const [year, month, day] = reminder.date.split("-").map(Number);
     const scheduledDate = new Date(year, month - 1, day, hour, minute, 0, 0);
     const scheduledAt = scheduledDate.getTime();
@@ -82,6 +107,9 @@ function generateCustomReminderNotifications(
       if (scheduledDate.getTime() <= now) {
         scheduledDate.setDate(scheduledDate.getDate() + 1);
       }
+      if (reminder.skipNextDate && format(scheduledDate, "yyyy-MM-dd") === reminder.skipNextDate) {
+        scheduledDate.setDate(scheduledDate.getDate() + 1);
+      }
       notifications.push({
         id: `${idPrefix}-daily-${targetId}`,
         type: "custom-reminder",
@@ -104,6 +132,9 @@ function generateCustomReminderNotifications(
       scheduledDate.setDate(scheduledDate.getDate() + daysUntil);
       scheduledDate.setHours(hour, minute, 0, 0);
       if (scheduledDate.getTime() <= now) {
+        scheduledDate.setDate(scheduledDate.getDate() + 7);
+      }
+      if (reminder.skipNextDate && format(scheduledDate, "yyyy-MM-dd") === reminder.skipNextDate) {
         scheduledDate.setDate(scheduledDate.getDate() + 7);
       }
       notifications.push({
@@ -135,6 +166,10 @@ function generateCustomReminderNotifications(
         if (scheduledDate.getTime() <= now) {
           scheduledDate.setDate(scheduledDate.getDate() + 7);
         }
+        if (reminder.skipNextDate && format(scheduledDate, "yyyy-MM-dd") === reminder.skipNextDate) {
+          // If this specific day's occurrence is skipped, compute its NEXT occurrence
+          scheduledDate.setDate(scheduledDate.getDate() + 7);
+        }
         notifications.push({
           id: `${idPrefix}-day-${targetId}-${targetDay}`,
           type: "custom-reminder",
@@ -158,6 +193,11 @@ function generateCustomReminderNotifications(
       scheduledDate.setDate(targetDayOfMonth);
       scheduledDate.setHours(hour, minute, 0, 0);
       if (scheduledDate.getTime() <= now) {
+        scheduledDate.setMonth(scheduledDate.getMonth() + 1);
+        scheduledDate.setDate(targetDayOfMonth);
+        scheduledDate.setHours(hour, minute, 0, 0);
+      }
+      if (reminder.skipNextDate && format(scheduledDate, "yyyy-MM-dd") === reminder.skipNextDate) {
         scheduledDate.setMonth(scheduledDate.getMonth() + 1);
         scheduledDate.setDate(targetDayOfMonth);
         scheduledDate.setHours(hour, minute, 0, 0);
@@ -242,7 +282,7 @@ export function generateNotifications(
           notifications.push({
             id: `deadline-tomorrow-${work.id}`,
             type: "deadline-tomorrow",
-            title: "⏰ Due Tomorrow",
+            title: "Due Tomorrow",
             body: `"${work.task}" is due tomorrow. Deadline: ${formattedDeadline}`,
             scheduledAt,
             priority: "normal",
@@ -266,7 +306,7 @@ export function generateNotifications(
           notifications.push({
             id: `deadline-today-${work.id}`,
             type: "deadline-today",
-            title: "📅 Due Today",
+            title: "Due Today",
             body: `"${work.task}" is due today. Deadline: ${formattedDeadline}`,
             scheduledAt,
             priority: "high",
@@ -297,7 +337,7 @@ export function generateNotifications(
             notifications.push({
               id: `overdue-${work.id}`,
               type: "overdue",
-              title: "🔴 Overdue Task",
+              title: "Overdue Task",
               body: `"${work.task}" is overdue. Deadline: ${formattedDeadline}`,
               scheduledAt,
               priority: "high",
@@ -348,8 +388,8 @@ export function generateNotifications(
     notifications.push({
       id: "weekly-summary",
       type: "weekly-summary",
-      title: "📊 Weekly Check-in",
-      body: `⏳ ${pendingTasks} Pending • ✅ ${completedTasks} Completed`,
+      title: "Weekly Check-in",
+      body: `${pendingTasks} Pending • ${completedTasks} Completed`,
       scheduledAt: scheduledAt.getTime(),
       priority: "low",
       read: false,
@@ -357,30 +397,13 @@ export function generateNotifications(
     });
   }
 
-  // Daily Reminder
-  if (settings.dailyReminder ?? settings.dailyReminderEnabled ?? true) {
-    const scheduledAt = new Date();
-    const [hour, minute] = settings.dailyReminderTime
-      .split(":")
-      .map(Number);
-
-    scheduledAt.setHours(hour, minute, 0, 0);
-
-    if (scheduledAt.getTime() <= now) {
-      scheduledAt.setDate(scheduledAt.getDate() + 1);
+  // Deduplicate notifications by deterministic ID to prevent duplicates
+  const uniqueNotifications = new Map<string, LectraNotification>();
+  for (const notif of notifications) {
+    if (!uniqueNotifications.has(notif.id)) {
+      uniqueNotifications.set(notif.id, notif);
     }
-
-    notifications.push({
-      id: "daily-reminder",
-      type: "daily-reminder",
-      title: "📚 Daily Reminder",
-      body: "Don't forget to check your tasks for today and tomorrow!",
-      scheduledAt: scheduledAt.getTime(),
-      priority: "normal",
-      read: false,
-      createdAt: now,
-    });
   }
 
-  return notifications;
+  return Array.from(uniqueNotifications.values());
 }

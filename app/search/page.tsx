@@ -105,7 +105,7 @@ export default function SearchPage() {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search entries, subjects, notes or tasks..."
+              placeholder="Search"
               className="h-12 rounded-2xl border-border bg-card pl-10 pr-10 text-sm text-foreground"
             />
 
@@ -218,7 +218,7 @@ export default function SearchPage() {
                   </h2>
 
                   <p className="mt-1.5 max-w-xs text-xs sm:text-sm leading-relaxed text-muted-foreground">
-                    Find entries using names, tags, categories, key notes, additional notes or tasks.
+                    Find entries using titles, tags, topics, notes or tasks.
                   </p>
                 </CardContent>
               </Card>

@@ -16,8 +16,8 @@ import { Button } from "@/components/ui/button";
 
 const features = [
   {
-    title: "Daily Capture",
-    description: "Record classes, lessons, subjects, and personal notes easily.",
+    title: "Quick Capture",
+    description: "Instantly capture notes, thoughts, and tasks in a single tap.",
     icon: FileText,
   },
   {
@@ -26,13 +26,23 @@ const features = [
     icon: Clock,
   },
   {
-    title: "Notifications & Reminders",
+    title: "Custom Reminders",
+    description: "Set one-time alarms for specific dates and times.",
+    icon: Bell,
+  },
+  {
+    title: "Recurring Reminders",
+    description: "Repeat notifications daily, weekly, monthly, or on selected days.",
+    icon: Bell,
+  },
+  {
+    title: "Notification Center",
     description: "Reliable alarms for due today, due tomorrow, and overdue items.",
     icon: Bell,
   },
   {
-    title: "Interactive Calendar",
-    description: "Timeline view with instant status indicators for every day.",
+    title: "Calendar",
+    description: "Timeline view with instant status indicators and month swipe navigation.",
     icon: CalendarDays,
   },
   {
@@ -41,14 +51,29 @@ const features = [
     icon: CheckCircle2,
   },
   {
-    title: "Fast Search",
+    title: "Tags & Categories",
+    description: "Organize entries with color-coded custom tags and categories.",
+    icon: FileText,
+  },
+  {
+    title: "Search",
     description: "Instant search across all entries, tasks, subjects, and notes.",
     icon: Search,
   },
   {
-    title: "File Attachments",
-    description: "Attach and preview photos and PDF documents right within entries.",
+    title: "Photo & PDF Attachments",
+    description: "Attach images and PDF documents directly into entries with local storage.",
     icon: Paperclip,
+  },
+  {
+    title: "Attachment Preview",
+    description: "View photos and read PDFs directly inside the app with export support.",
+    icon: Paperclip,
+  },
+  {
+    title: "Light / Dark / System Theme",
+    description: "Seamlessly adapts to your preferred theme and Android system settings.",
+    icon: CheckCircle2,
   },
 ];
 
@@ -56,7 +81,7 @@ export default function AboutPage() {
   const router = useRouter();
 
   return (
-    <main className="px-4 sm:px-5 text-foreground">
+    <main className="px-4 sm:px-5 text-foreground pb-6">
       <div className="mx-auto w-full max-w-4xl">
         {/* Header */}
         <header className="flex items-center gap-4">
@@ -102,14 +127,26 @@ export default function AboutPage() {
                 </span>
               </div>
 
-              <p className="mt-2 text-xs sm:text-sm font-medium text-primary">
+              <p className="mt-2 text-xs sm:text-sm font-semibold text-primary">
                 Capture Today. Recall Anytime.
               </p>
 
               <p className="mt-3 max-w-md text-xs leading-relaxed text-muted-foreground sm:text-sm">
-                Lectra is a personal daily capture and task management app designed
-                to help you save notes, organize tasks, track deadlines, manage
-                reminders and recall important things when you need them.
+                Lectra is a personal daily capture and task management app that helps users save things they need to remember, organize tasks, set deadlines and reminders, and quickly access their information later.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Built for everyday use */}
+        <div className="mt-6 sm:mt-7">
+          <Card className="rounded-3xl border-border bg-card shadow-xs">
+            <CardContent className="p-4 sm:p-5">
+              <h3 className="text-sm font-semibold text-foreground sm:text-base">
+                Built for everyday use
+              </h3>
+              <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground sm:text-sm">
+                Lectra reduces the need to remember everything manually by keeping your notes, daily capture, tasks, deadlines, and reminders all in one reliable, privacy-focused place. Everything stays on your device.
               </p>
             </CardContent>
           </Card>
@@ -118,10 +155,10 @@ export default function AboutPage() {
         {/* Key Features */}
         <div className="mt-6 sm:mt-7">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Key Features
+            Feature Highlights
           </h3>
 
-          <div className="mt-3 space-y-2.5 sm:space-y-3">
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
             {features.map((item) => {
               const Icon = item.icon;
 
