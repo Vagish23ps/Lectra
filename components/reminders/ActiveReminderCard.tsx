@@ -7,12 +7,12 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Bell, Repeat, Pause, Play, ExternalLink, Calendar, Clock, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { Bell, Repeat, Pause, Play, ExternalLink, Clock, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ActiveReminderItem } from "@/hooks/useActiveReminders";
-import { formatReminderSummary, formatTime12h } from "./ReminderSummary";
+import { formatReminderSummary } from "./ReminderSummary";
 
 interface ActiveReminderCardProps {
   item: ActiveReminderItem;

@@ -47,12 +47,7 @@ export default function AndroidBackHandler() {
 
         // 2. Navigation hierarchy:
         // Sub-settings pages -> Settings
-        if (
-          pathname === "/settings/notifications" ||
-          pathname === "/settings/appearance" ||
-          pathname === "/settings/tags" ||
-          pathname === "/settings/about"
-        ) {
+        if (pathname && pathname.startsWith("/settings/") && pathname !== "/settings") {
           router.push("/settings");
           return;
         }

@@ -147,12 +147,6 @@ export async function reconcileCapacitorNotifications(
     // Cancel existing before re-scheduling to ensure exact update
     await cancelCapacitorNotification(nativeId);
 
-    console.log("🔔 LECTRA SCHEDULING:", {
-      id: nativeId,
-      type: notification.type,
-      scheduledAt: new Date(notification.scheduledAt).toISOString(),
-    });
-
     if (notification.type === "weekly-summary") {
       const [hourStr, minuteStr] = settings.weeklySummaryTime.split(":");
       const hour = parseInt(hourStr, 10);
@@ -380,10 +374,6 @@ export async function initializeCapacitorNotificationActions() {
   await LocalNotifications.addListener(
     "localNotificationReceived",
     (notification) => {
-      console.log(
-        "🚨🚨🚨 LECTRA NOTIFICATION RECEIVED:",
-        JSON.stringify(notification, null, 2),
-      );
       recordNotificationToHistory(notification);
     },
   );

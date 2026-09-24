@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Clock, Moon, Sun, Calendar, RotateCcw } from "lucide-react";
+import { Clock, Sun, Calendar, RotateCcw } from "lucide-react";
 import { format, addMinutes, addHours } from "date-fns";
 
 interface SnoozeModalProps {

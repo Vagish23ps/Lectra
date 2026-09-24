@@ -3,7 +3,7 @@ declare module "pdfjs-dist/build/pdf.mjs" {
     workerSrc: string;
   };
   export const version: string;
-  export function getDocument(src: any): {
+  export function getDocument(src: unknown): {
     promise: Promise<{
       numPages: number;
       getPage: (pageNumber: number) => Promise<{
@@ -13,7 +13,7 @@ declare module "pdfjs-dist/build/pdf.mjs" {
         };
         render: (params: {
           canvasContext: CanvasRenderingContext2D;
-          viewport: any;
+          viewport: object;
         }) => {
           promise: Promise<void>;
           cancel: () => void;

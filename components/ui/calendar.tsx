@@ -181,12 +181,12 @@ function CalendarDayButton({
   className,
   day,
   modifiers,
-  locale,
+  locale: _locale,
   ...props
 }: React.ComponentProps<typeof DayButton> & {
   locale?: Partial<Locale>;
 }) {
-  const defaultClassNames = getDefaultClassNames();
+  const _defaultClassNames = getDefaultClassNames();
 
   const ref = React.useRef<HTMLButtonElement>(null);
 

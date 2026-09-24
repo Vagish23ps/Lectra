@@ -1,7 +1,7 @@
 import { useMemo } from "react";
-import { format, isToday, isTomorrow, isPast, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { useEntryStore } from "@/store/entryStore";
-import { useActiveReminders, ActiveReminderItem } from "./useActiveReminders";
+import { useActiveReminders } from "./useActiveReminders";
 
 export interface UpcomingItem {
   id: string;

@@ -1,12 +1,14 @@
 "use client";
 
 import { Bell } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useNotificationStore } from "@/store/notificationStore";
 import { motion, AnimatePresence } from "framer-motion";
 import { buttonTap, badgeVariants } from "@/lib/animations";
+
+const emptySubscribe = () => () => {};
 
 interface NotificationBellProps {
   onClick?: () => void;
@@ -15,11 +17,11 @@ interface NotificationBellProps {
 export default function NotificationBell({ onClick }: NotificationBellProps) {
   const router = useRouter();
   const unreadCount = useNotificationStore((state) => state.unreadCount());
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
 
   const handleClick = () => {
     if (onClick) {

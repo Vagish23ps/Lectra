@@ -2,9 +2,11 @@ import JSZip from "jszip";
 import { format } from "date-fns";
 import { useEntryStore } from "@/store/entryStore";
 import { useTagStore } from "@/store/tagStore";
-import { useNotificationStore } from "@/store/notificationStore";
-import { useNotificationSettingsStore } from "@/store/notificationSettingsStore";
-import { useThemeStore } from "@/store/themeStore";
+import { useNotificationStore, NotificationItem } from "@/store/notificationStore";
+import { useNotificationSettingsStore, NotificationSettings } from "@/store/notificationSettingsStore";
+import { useThemeStore, ThemeMode } from "@/store/themeStore";
+import { Entry } from "@/types/entry";
+import { Tag } from "@/types/tag";
 import {
   getAllAttachmentRecords,
   saveAttachmentFile,
@@ -26,10 +28,10 @@ export interface BackupManifest {
 }
 
 export interface BackupData {
-  entries: any[];
-  customTags: any[];
-  notificationSettings?: any;
-  notifications?: any[];
+  entries: Entry[];
+  customTags: Tag[];
+  notificationSettings?: NotificationSettings;
+  notifications?: NotificationItem[];
   clearedIds?: string[];
   theme?: string;
   attachmentMeta?: Array<{
@@ -185,11 +187,12 @@ export async function validateBackupZip(file: File | Blob): Promise<{
       manifest,
       data,
     };
-  } catch (err: any) {
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : "Corrupted archive";
     console.error("Backup validation error:", err);
     return {
       isValid: false,
-      error: `Failed to read backup file: ${err?.message || "Corrupted archive"}`,
+      error: `Failed to read backup file: ${errorMsg}`,
     };
   }
 }
@@ -249,7 +252,7 @@ export async function restoreFullBackup(file: File | Blob): Promise<BackupRestor
   }
 
   if (data.theme && (data.theme === "light" || data.theme === "dark" || data.theme === "system")) {
-    useThemeStore.getState().setTheme(data.theme as any);
+    useThemeStore.getState().setTheme(data.theme as ThemeMode);
   }
 
   // 3. Re-schedule active notifications/reminders with the restored entries

@@ -211,11 +211,7 @@ export const useEntryStore = create<EntryStore>()(
       name: "lectra-storage",
 
       onRehydrateStorage: () => {
-        console.log("🚨 ZUSTAND HYDRATION START");
-
         return (state) => {
-          console.log("🚨 ZUSTAND HYDRATION FINISHED", state?.entries.length);
-
           if (state?.entries) {
             // Normalize any legacy tag names like "Course" or "Exam" to standard built-in IDs "course", "exam"
             let modified = false;

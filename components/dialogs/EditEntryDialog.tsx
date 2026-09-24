@@ -90,6 +90,19 @@ export default function EditEntryDialog({
     previewUrl?: string;
   } | null>(null);
 
+  const datePresets = useMemo(() => {
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    return [
+      { label: "Today", value: format(today, "yyyy-MM-dd") },
+      { label: "Tomorrow", value: format(tomorrow, "yyyy-MM-dd") },
+      { label: "Next Week", value: format(nextWeek, "yyyy-MM-dd") },
+    ];
+  }, []);
+
   useEffect(() => {
     if (open) {
       setEntryName(entry.entryName);
@@ -518,18 +531,7 @@ export default function EditEntryDialog({
 
                         {/* Quick Deadline Presets */}
                         <div className="flex flex-wrap gap-1.5">
-                          {[
-                            { label: "Today", value: format(new Date(), "yyyy-MM-dd") },
-                            { label: "Tomorrow", value: format(new Date(Date.now() + 86400000), "yyyy-MM-dd") },
-                            {
-                              label: "Next Week",
-                              value: (() => {
-                                const d = new Date();
-                                d.setDate(d.getDate() + 7);
-                                return format(d, "yyyy-MM-dd");
-                              })(),
-                            },
-                          ].map((preset) => {
+                          {datePresets.map((preset) => {
                             const isSelected = work.deadline === preset.value;
                             return (
                               <button

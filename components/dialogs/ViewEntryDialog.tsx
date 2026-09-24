@@ -78,13 +78,13 @@ export default function ViewEntryDialog({
 
   useEffect(() => {
     if (open && highlightWorkId) {
-      setActiveHighlightId(highlightWorkId);
       const scrollTimer = setTimeout(() => {
+        setActiveHighlightId(highlightWorkId);
         highlightedTaskRef.current?.scrollIntoView({
           behavior: "smooth",
           block: "center",
         });
-      }, 250);
+      }, 50);
 
       const fadeTimer = setTimeout(() => {
         setActiveHighlightId(null);

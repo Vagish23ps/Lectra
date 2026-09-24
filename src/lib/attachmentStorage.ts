@@ -140,14 +140,20 @@ export async function getAllAttachmentRecords(): Promise<StoredAttachmentRecord[
       const request = store.getAll();
 
       request.onsuccess = () => {
-        const list = (request.result || []) as any[];
+        const list = (request.result || []) as Array<
+          | { id: string; blob?: Blob | ArrayBuffer; name?: string; type?: string; size?: number; updatedAt?: number }
+          | Blob
+        >;
         const records: StoredAttachmentRecord[] = [];
         for (const item of list) {
           if (!item) continue;
-          let blob: Blob | null = null;
           if (item instanceof Blob) {
-            blob = item;
-          } else if (item.blob instanceof Blob) {
+            // Bare Blob stored directly — no metadata available, skip
+            continue;
+          }
+          // item is now the object variant
+          let blob: Blob | null = null;
+          if (item.blob instanceof Blob) {
             blob = item.blob;
           } else if (item.blob) {
             try {
@@ -310,9 +316,10 @@ export async function exportAttachmentFile(
         filePath: statResult.uri || `Documents/Lectra/${safeName}`,
         method: "native-documents",
       };
-    } catch (nativeErr: any) {
+    } catch (nativeErr) {
+      const msg = nativeErr instanceof Error ? nativeErr.message : "Storage error";
       console.error("Native file export failed:", nativeErr);
-      throw new Error(`Device save failed: ${nativeErr?.message || "Storage error"}`);
+      throw new Error(`Device save failed: ${msg}`);
     }
   }
 
@@ -320,7 +327,10 @@ export async function exportAttachmentFile(
   if (typeof window !== "undefined" && "showSaveFilePicker" in window) {
     try {
       const extension = safeName.includes(".") ? `.${safeName.split(".").pop()}` : "";
-      const handle = await (window as any).showSaveFilePicker({
+      const windowWithPicker = window as unknown as {
+        showSaveFilePicker: (opts: unknown) => Promise<FileSystemFileHandle>;
+      };
+      const handle = await windowWithPicker.showSaveFilePicker({
         suggestedName: safeName,
         types: [
           {
@@ -341,8 +351,8 @@ export async function exportAttachmentFile(
         destination: handle.name || safeName,
         method: "file-picker",
       };
-    } catch (pickerErr: any) {
-      if (pickerErr?.name === "AbortError") {
+    } catch (pickerErr) {
+      if ((pickerErr as { name?: string })?.name === "AbortError") {
         throw new Error("Save cancelled by user.");
       }
       console.warn("showSaveFilePicker fallback to download:", pickerErr);
@@ -372,7 +382,7 @@ export async function exportAttachmentFile(
       destination: "Downloads",
       method: "browser-download",
     };
-  } catch (err: any) {
+  } catch (err) {
     console.error("Browser download fallback failed:", err);
     throw new Error("Download failed.");
   }

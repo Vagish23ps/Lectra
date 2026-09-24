@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -45,7 +45,7 @@ export default function ReminderConfigModal({
 
   useEffect(() => {
     if (open) {
-      setError("");
+      setTimeout(() => setError(""), 0);
       if (initialReminder) {
         setName(initialReminder.name || "");
         setType(initialReminder.type || "one-time");
@@ -92,11 +92,10 @@ export default function ReminderConfigModal({
     }
   };
 
-  // Construct draft reminder for preview and saving
-  const draftReminder: CustomReminder = {
-    id: initialReminder?.id || crypto.randomUUID(),
+  const draftReminder = useMemo<CustomReminder>(() => ({
+    id: initialReminder?.id || "draft",
     name: name.trim() || undefined,
-    enabled: initialReminder?.enabled ?? true,
+    enabled: true,
     type,
     time: time || "09:00",
     date: type === "one-time" ? date : undefined,
@@ -114,7 +113,20 @@ export default function ReminderConfigModal({
           }
         : undefined,
     createdAt: initialReminder?.createdAt || new Date().toISOString(),
-  };
+  }), [name, type, time, date, frequency, weeklyDay, selectedDays, dayOfMonth, initialReminder]);
+
+  const datePresets = useMemo(() => {
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    return [
+      { label: "Today", value: format(today, "yyyy-MM-dd") },
+      { label: "Tomorrow", value: format(tomorrow, "yyyy-MM-dd") },
+      { label: "Next Week", value: format(nextWeek, "yyyy-MM-dd") },
+    ];
+  }, [open]);
 
   const handleSave = () => {
     setError("");
@@ -149,7 +161,30 @@ export default function ReminderConfigModal({
       }
     }
 
-    onSave(draftReminder);
+    const reminderToSave: CustomReminder = {
+      id: initialReminder?.id || crypto.randomUUID(),
+      name: name.trim() || undefined,
+      enabled: initialReminder?.enabled ?? true,
+      type,
+      time: time || "09:00",
+      date: type === "one-time" ? date : undefined,
+      recurrence:
+        type === "recurring"
+          ? {
+              frequency,
+              daysOfWeek:
+                frequency === "weekly"
+                  ? [weeklyDay]
+                  : frequency === "selected-days"
+                  ? selectedDays
+                  : undefined,
+              dayOfMonth: frequency === "monthly" ? dayOfMonth : undefined,
+            }
+          : undefined,
+      createdAt: initialReminder?.createdAt || new Date().toISOString(),
+    };
+
+    onSave(reminderToSave);
     onOpenChange(false);
   };
 
@@ -235,11 +270,7 @@ export default function ReminderConfigModal({
                 Reminder Date
               </label>
               <div className="mb-2.5 flex gap-2">
-                {[
-                  { label: "Today", value: format(new Date(), "yyyy-MM-dd") },
-                  { label: "Tomorrow", value: format(new Date(Date.now() + 86400000), "yyyy-MM-dd") },
-                  { label: "Next Week", value: (() => { const d = new Date(); d.setDate(d.getDate() + 7); return format(d, "yyyy-MM-dd"); })() },
-                ].map((preset) => (
+                {datePresets.map((preset) => (
                   <button
                     key={preset.label}
                     type="button"

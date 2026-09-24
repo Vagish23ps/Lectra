@@ -1,6 +1,5 @@
 import { getAllAttachmentRecords, deleteAttachmentFile, formatFileSize } from "./attachmentStorage";
 import { useEntryStore } from "@/store/entryStore";
-import { Entry } from "@/types/entry";
 
 export interface StorageMetrics {
   attachmentBytes: number;
