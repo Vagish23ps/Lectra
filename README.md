@@ -261,4 +261,4 @@ This repository does not currently specify an explicit open-source license. All 
 - **Version Discrepancy Note**: The project configuration currently reflects:
   - `package.json`: `0.1.0`
   - `android/app/build.gradle`: `versionName "1.0"` (`versionCode 1`)
-  - In-app About screen: `v1.0.0`
+  - In-app About screen: `v1.0.0`git diff --stat

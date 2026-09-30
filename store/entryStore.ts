@@ -2,7 +2,6 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { Entry, WorkItem } from "@/types/entry";
 import { CustomReminder } from "@/types/reminder";
-import { notificationService } from "@/src/notifications/service";
 import { deleteAttachmentFile } from "@/src/lib/attachmentStorage";
 import { toast } from "sonner";
 
@@ -43,8 +42,6 @@ export const useEntryStore = create<EntryStore>()(
         set({
           entries: updatedEntries,
         });
-
-        void notificationService.refresh(updatedEntries);
       },
 
       deleteEntry: (id) => {
@@ -63,8 +60,6 @@ export const useEntryStore = create<EntryStore>()(
         set({
           entries: updatedEntries,
         });
-
-        void notificationService.refresh(updatedEntries);
       },
 
       updateEntry: (updatedEntry) => {
@@ -75,8 +70,6 @@ export const useEntryStore = create<EntryStore>()(
         set({
           entries: updatedEntries,
         });
-
-        void notificationService.refresh(updatedEntries);
       },
 
       toggleWorkCompleted: (entryId: string, workId: string) => {
@@ -100,7 +93,6 @@ export const useEntryStore = create<EntryStore>()(
         });
 
         set({ entries: updatedEntries });
-        void notificationService.refresh(updatedEntries);
 
         if (willBeCompleted) {
           toast("Task completed", {
@@ -138,7 +130,6 @@ export const useEntryStore = create<EntryStore>()(
         });
 
         set({ entries: updatedEntries });
-        void notificationService.refresh(updatedEntries);
         toast.success("Task added");
       },
 
@@ -156,8 +147,6 @@ export const useEntryStore = create<EntryStore>()(
         set({
           entries: updatedEntries,
         });
-
-        void notificationService.refresh(updatedEntries);
       },
 
       replaceTagInAllEntries: (oldTagId: string, newTagId: string) => {
@@ -177,8 +166,6 @@ export const useEntryStore = create<EntryStore>()(
         set({
           entries: updatedEntries,
         });
-
-        void notificationService.refresh(updatedEntries);
       },
 
       updateReminder: (entryId: string, workId: string | null, reminder: CustomReminder | undefined) => {
@@ -202,8 +189,6 @@ export const useEntryStore = create<EntryStore>()(
         set({
           entries: updatedEntries,
         });
-
-        void notificationService.refresh(updatedEntries);
       },
     }),
 

@@ -5,6 +5,8 @@ import { requestNotificationPermission } from "./permission";
 class NotificationService {
   private initialized = false;
   private permissionGranted = false;
+  private isRunning = false;
+  private pendingEntries: Entry[] | null = null;
 
   async initialize(entries: Entry[]) {
     if (this.initialized) {
@@ -21,13 +23,29 @@ class NotificationService {
     this.permissionGranted = true;
     this.initialized = true;
 
-    await runNotificationScheduler(entries);
+    await this.refresh(entries);
   }
 
   async refresh(entries: Entry[]) {
     if (!this.initialized || !this.permissionGranted) return;
 
-    await runNotificationScheduler(entries);
+    if (this.isRunning) {
+      // Queue latest entries to run once current reconciliation cycle completes
+      this.pendingEntries = entries;
+      return;
+    }
+
+    this.isRunning = true;
+    try {
+      await runNotificationScheduler(entries);
+    } finally {
+      this.isRunning = false;
+      if (this.pendingEntries) {
+        const nextEntries = this.pendingEntries;
+        this.pendingEntries = null;
+        void this.refresh(nextEntries);
+      }
+    }
   }
 }
 export const notificationService = new NotificationService();

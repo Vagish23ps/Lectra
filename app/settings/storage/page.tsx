@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import {
   ArrowLeft,
   HardDrive,
@@ -13,7 +14,6 @@ import {
   Image as ImageIcon,
   Sparkles,
   RefreshCw,
-  CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -50,9 +50,9 @@ export default function StoragePage() {
   const [previewItem, setPreviewItem] = useState<ManagedAttachmentItem | null>(null);
   const [thumbnailUrls, setThumbnailUrls] = useState<Map<string, string>>(new Map());
 
-  const loadMetrics = async () => {
+  const loadMetrics = async (showLoading = false) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const data = await calculateStorageMetrics();
       setMetrics(data.metrics);
       setAttachments(data.attachments);
@@ -65,7 +65,24 @@ export default function StoragePage() {
   };
 
   useEffect(() => {
-    void loadMetrics();
+    let isMounted = true;
+    calculateStorageMetrics()
+      .then((data) => {
+        if (!isMounted) return;
+        setMetrics(data.metrics);
+        setAttachments(data.attachments);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Failed to load storage metrics:", err);
+        if (isMounted) {
+          toast.error("Could not calculate storage usage.");
+          setLoading(false);
+        }
+      });
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -286,9 +303,11 @@ export default function StoragePage() {
                     {/* Thumbnail / Icon */}
                     <div className="relative aspect-square w-full overflow-hidden bg-secondary/30">
                       {isImage && thumbUrl ? (
-                        <img
+                        <Image
                           src={thumbUrl}
                           alt={att.name}
+                          fill
+                          unoptimized
                           className="h-full w-full object-cover"
                         />
                       ) : isPdf ? (

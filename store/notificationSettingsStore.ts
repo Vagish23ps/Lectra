@@ -1,8 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { resetNotification } from "@/src/notifications/storage";
-import { notificationService } from "@/src/notifications/service";
-import { useEntryStore } from "./entryStore";
 
 export interface NotificationSettings {
   enabled: boolean;
@@ -109,9 +107,6 @@ export const useNotificationSettingsStore = create<NotificationSettings>()(
             ...updates,
           };
         });
-
-        const entries = useEntryStore.getState().entries;
-        void notificationService.refresh(entries);
       },
     }),
     {

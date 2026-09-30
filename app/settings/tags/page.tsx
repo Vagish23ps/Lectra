@@ -8,7 +8,6 @@ import {
   Pencil,
   Trash2,
   Tag as TagIcon,
-  Check,
   AlertTriangle,
   X,
 } from "lucide-react";

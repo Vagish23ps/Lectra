@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { Eye, ImageIcon, Loader2, Trash2 } from "lucide-react";
 import { Attachment } from "@/types/entry";
 import { getAttachmentFile, formatFileSize } from "@/src/lib/attachmentStorage";
@@ -21,14 +22,15 @@ export default function AttachmentThumbnail({
   onDelete,
   isPending = false,
 }: AttachmentThumbnailProps) {
-  const [blobUrl, setBlobUrl] = useState<string | null>(previewUrl || null);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(!previewUrl);
   const [error, setError] = useState(false);
 
+  const displayUrl = previewUrl || blobUrl;
+  const isLoading = previewUrl ? false : loading;
+
   useEffect(() => {
     if (previewUrl) {
-      setBlobUrl(previewUrl);
-      setLoading(false);
       return;
     }
 
@@ -76,22 +78,23 @@ export default function AttachmentThumbnail({
         tabIndex={0}
         aria-label={`View photo ${attachment.name}`}
       >
-        {loading ? (
+        {isLoading ? (
           <div className="flex flex-col items-center gap-1.5 text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin text-primary" />
             <span className="text-[11px]">Loading...</span>
           </div>
-        ) : error || !blobUrl ? (
+        ) : error || !displayUrl ? (
           <div className="flex flex-col items-center gap-1 text-muted-foreground p-2 text-center">
             <ImageIcon className="h-6 w-6 opacity-40 text-amber-500" />
             <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Attachment unavailable</span>
           </div>
         ) : (
-          <img
-            src={blobUrl}
+          <Image
+            src={displayUrl}
             alt={attachment.name}
+            fill
+            unoptimized
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-            loading="lazy"
           />
         )}
 

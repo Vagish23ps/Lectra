@@ -13,7 +13,6 @@ import {
   exportAttachmentFile,
   ExportResult,
 } from "./attachmentStorage";
-import { notificationService } from "@/src/notifications/service";
 
 export interface BackupManifest {
   version: string;
@@ -254,9 +253,6 @@ export async function restoreFullBackup(file: File | Blob): Promise<BackupRestor
   if (data.theme && (data.theme === "light" || data.theme === "dark" || data.theme === "system")) {
     useThemeStore.getState().setTheme(data.theme as ThemeMode);
   }
-
-  // 3. Re-schedule active notifications/reminders with the restored entries
-  void notificationService.refresh(data.entries || []);
 
   return {
     success: true,

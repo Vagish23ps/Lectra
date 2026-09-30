@@ -8,7 +8,6 @@ import {
   Upload,
   FileArchive,
   CheckCircle2,
-  AlertCircle,
   FileCheck,
   RefreshCw,
   Layers,
@@ -26,7 +25,6 @@ import {
   validateBackupZip,
   restoreFullBackup,
   BackupManifest,
-  BackupData,
 } from "@/src/lib/backupService";
 
 export default function BackupRestorePage() {
@@ -62,9 +60,10 @@ export default function BackupRestorePage() {
         destination: result.destination,
       });
       toast.success("Backup exported successfully!");
-    } catch (err: any) {
+    } catch (err) {
       console.error("Export failed:", err);
-      toast.error(err?.message || "Failed to export backup.");
+      const message = err instanceof Error ? err.message : "Failed to export backup.";
+      toast.error(message);
     } finally {
       setIsExporting(false);
     }
@@ -87,8 +86,9 @@ export default function BackupRestorePage() {
       }
       setPreviewManifest(validation.manifest);
       toast.success("Backup archive verified and ready to restore.");
-    } catch (err: any) {
-      toast.error(err?.message || "Could not read backup file.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not read backup file.";
+      toast.error(message);
       setSelectedFile(null);
     } finally {
       setIsValidating(false);
@@ -107,9 +107,10 @@ export default function BackupRestorePage() {
       setSelectedFile(null);
       setPreviewManifest(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
-    } catch (err: any) {
+    } catch (err) {
       console.error("Restore error:", err);
-      toast.error(err?.message || "Failed to restore backup.");
+      const message = err instanceof Error ? err.message : "Failed to restore backup.";
+      toast.error(message);
     } finally {
       setIsImporting(false);
     }

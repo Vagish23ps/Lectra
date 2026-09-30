@@ -11,8 +11,6 @@ import {
   StickyNote,
   CalendarDays,
   Paperclip,
-  ImageIcon,
-  X,
   Camera,
 } from "lucide-react";
 
@@ -30,10 +28,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Entry, WorkItem, Attachment } from "@/types/entry";
 import { useEntryStore } from "@/store/entryStore";
-import { useDraftStore, DraftEntry, isDraftEmpty } from "@/store/draftStore";
-import { motion, AnimatePresence } from "framer-motion";
+import { useDraftStore, isDraftEmpty } from "@/store/draftStore";
+import { motion } from "framer-motion";
 import { listVariants, itemVariants } from "@/lib/animations";
-import { saveAttachmentFile, formatFileSize } from "@/src/lib/attachmentStorage";
+import { saveAttachmentFile } from "@/src/lib/attachmentStorage";
 import TagSelector from "@/components/tags/TagSelector";
 import ReminderSection from "@/components/reminders/ReminderSection";
 import { CustomReminder } from "@/types/reminder";
@@ -84,7 +82,8 @@ export default function AddEntryDialog({
   };
 
   const addEntry = useEntryStore((state) => state.addEntry);
-  const { draft, saveDraft, clearDraft, hasDraft } = useDraftStore();
+  const entries = useEntryStore((state) => state.entries);
+  const { saveDraft, clearDraft } = useDraftStore();
   const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [entryName, setEntryName] = useState("");
@@ -119,16 +118,18 @@ export default function AddEntryDialog({
 
   useEffect(() => {
     if (open) {
-      const currentDraft = useDraftStore.getState().draft;
-      if (currentDraft && !isDraftEmpty(currentDraft)) {
-        setEntryName((prev) => (prev ? prev : currentDraft.entryName || ""));
-        setSubject((prev) => (prev ? prev : currentDraft.subject || ""));
-        setLesson((prev) => (prev ? prev : currentDraft.lesson || ""));
-        setNotes((prev) => (prev ? prev : currentDraft.notes || ""));
-        setTags((prev) => (prev.length > 0 ? prev : currentDraft.tags || []));
-        setWorks((prev) => (prev.length > 0 ? prev : currentDraft.works || []));
-        setReminder((prev) => (prev ? prev : currentDraft.reminder));
-      }
+      setTimeout(() => {
+        const currentDraft = useDraftStore.getState().draft;
+        if (currentDraft && !isDraftEmpty(currentDraft)) {
+          setEntryName((prev) => (prev ? prev : currentDraft.entryName || ""));
+          setSubject((prev) => (prev ? prev : currentDraft.subject || ""));
+          setLesson((prev) => (prev ? prev : currentDraft.lesson || ""));
+          setNotes((prev) => (prev ? prev : currentDraft.notes || ""));
+          setTags((prev) => (prev.length > 0 ? prev : currentDraft.tags || []));
+          setWorks((prev) => (prev.length > 0 ? prev : currentDraft.works || []));
+          setReminder((prev) => (prev ? prev : currentDraft.reminder));
+        }
+      }, 0);
     }
   }, [open]);
 
@@ -162,10 +163,10 @@ export default function AddEntryDialog({
     setWorks((prev) => prev.filter((work) => work.id !== id));
   };
 
-  const updateWork = (
+  const updateWork = <K extends keyof WorkItem>(
     id: string,
-    field: keyof WorkItem,
-    value: any,
+    field: K,
+    value: WorkItem[K],
   ) => {
     setWorks((prev) =>
       prev.map((work) =>
@@ -318,7 +319,6 @@ export default function AddEntryDialog({
   };
 
   const recentCategories = useMemo(() => {
-    const entries = useEntryStore.getState().entries;
     const counts = new Map<string, number>();
     for (const e of entries) {
       const cat = e.subject?.trim();
@@ -328,7 +328,7 @@ export default function AddEntryDialog({
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
       .map(([name]) => name);
-  }, [open]);
+  }, [entries]);
 
   const photoAttachments = useMemo(
     () =>

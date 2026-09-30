@@ -6,19 +6,13 @@ import {
   CalendarDays,
   CheckCircle2,
   Circle,
-  Clock3,
   FileText,
   ListTodo,
   StickyNote,
-  Tag,
   Pencil,
   Paperclip,
-  ImageIcon,
-  Eye,
   Trash2,
-  Sparkles,
   Bell,
-  ArrowRight,
   Plus,
 } from "lucide-react";
 
@@ -94,10 +88,15 @@ export default function ViewEntryDialog({
         clearTimeout(scrollTimer);
         clearTimeout(fadeTimer);
       };
-    } else if (!open) {
-      setActiveHighlightId(null);
     }
   }, [open, highlightWorkId]);
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      setActiveHighlightId(null);
+    }
+    onOpenChange(nextOpen);
+  };
 
   const toggleWorkCompleted = (workId: string) => {
     if (!entry) return;
@@ -165,7 +164,7 @@ export default function ViewEntryDialog({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="box-border flex max-h-[88vh] w-[calc(100vw-2rem)] max-w-lg flex-col overflow-x-hidden overflow-y-auto border-border bg-popover p-0 sm:max-w-lg">
           {/* Header */}
           <DialogHeader className="box-border w-full min-w-0 border-b border-border px-4 pb-3.5 pt-4 pr-12 sm:px-5 sm:pt-5">

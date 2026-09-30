@@ -50,6 +50,7 @@ function generateCustomReminderNotifications(
     ? (work.task.trim() || "Task Reminder")
     : (entry.entryName.trim() || entry.subject.trim() || "Entry Reminder");
 
+  const entryCreatedAt = entry.createdAt ? new Date(entry.createdAt).getTime() : 0;
   const [hour, minute] = (reminder.time || "09:00").split(":").map(Number);
 
   const snoozedAt = reminder.snoozedUntil
@@ -69,7 +70,7 @@ function generateCustomReminderNotifications(
       workId: isTask ? work.id : undefined,
       customReminder: reminder,
       read: false,
-      createdAt: now,
+      createdAt: entryCreatedAt,
     });
 
     if (reminder.type === "one-time") {
@@ -95,7 +96,7 @@ function generateCustomReminderNotifications(
         workId: isTask ? work.id : undefined,
         customReminder: reminder,
         read: false,
-        createdAt: now,
+        createdAt: entryCreatedAt,
       });
     }
   } else if (reminder.type === "recurring") {
@@ -121,7 +122,7 @@ function generateCustomReminderNotifications(
         workId: isTask ? work.id : undefined,
         customReminder: reminder,
         read: false,
-        createdAt: now,
+        createdAt: entryCreatedAt,
       });
     } else if (frequency === "weekly") {
       const targetDay = reminder.recurrence?.daysOfWeek?.[0] ?? 0;
@@ -148,7 +149,7 @@ function generateCustomReminderNotifications(
         workId: isTask ? work.id : undefined,
         customReminder: reminder,
         read: false,
-        createdAt: now,
+        createdAt: entryCreatedAt,
       });
     } else if (frequency === "selected-days") {
       const days =
@@ -181,7 +182,7 @@ function generateCustomReminderNotifications(
           workId: isTask ? work.id : undefined,
           customReminder: reminder,
           read: false,
-          createdAt: now,
+          createdAt: entryCreatedAt,
         });
       }
     } else if (frequency === "monthly") {
@@ -213,7 +214,7 @@ function generateCustomReminderNotifications(
         workId: isTask ? work.id : undefined,
         customReminder: reminder,
         read: false,
-        createdAt: now,
+        createdAt: entryCreatedAt,
       });
     }
   }
@@ -237,6 +238,8 @@ export function generateNotifications(
     settings.customReminders ?? settings.customRemindersEnabled ?? true;
 
   entries.forEach((entry) => {
+    const entryCreatedAt = entry.createdAt ? new Date(entry.createdAt).getTime() : 0;
+
     // Custom Reminder for Entry
     if (isCustomRemindersEnabled && entry.reminder) {
       const entryReminders = generateCustomReminderNotifications(
@@ -289,7 +292,7 @@ export function generateNotifications(
             entryId: entry.id,
             workId: work.id,
             read: false,
-            createdAt: now,
+            createdAt: entryCreatedAt,
           });
         }
       }
@@ -313,7 +316,7 @@ export function generateNotifications(
             entryId: entry.id,
             workId: work.id,
             read: false,
-            createdAt: now,
+            createdAt: entryCreatedAt,
           });
         }
       }
@@ -344,7 +347,7 @@ export function generateNotifications(
               entryId: entry.id,
               workId: work.id,
               read: false,
-              createdAt: now,
+              createdAt: entryCreatedAt,
             });
           }
         }
@@ -393,7 +396,7 @@ export function generateNotifications(
       scheduledAt: scheduledAt.getTime(),
       priority: "low",
       read: false,
-      createdAt: now,
+      createdAt: scheduledAt.getTime(),
     });
   }
 

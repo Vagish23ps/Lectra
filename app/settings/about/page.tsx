@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -110,9 +111,11 @@ export default function AboutPage() {
           <Card className="overflow-hidden rounded-3xl border-border bg-card shadow-sm">
             <CardContent className="flex flex-col items-center p-5 sm:p-6 text-center">
               <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl shadow-md shadow-primary/20 sm:h-20 sm:w-20">
-                <img
+                <Image
                   src="/favicon.png"
                   alt="Lectra Logo"
+                  width={80}
+                  height={80}
                   className="h-full w-full object-cover"
                 />
               </div>

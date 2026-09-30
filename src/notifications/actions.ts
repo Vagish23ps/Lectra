@@ -43,9 +43,16 @@ export function handleNotificationClick(
     }
   }
 
+  const navigate = (relativeUrl: string) => {
+    if (typeof window !== "undefined") {
+      const url = new URL(relativeUrl, window.location.origin);
+      window.location.href = url.href;
+    }
+  };
+
   if (targetEntryId) {
     const workParam = targetWorkId ? `&workId=${targetWorkId}` : "";
-    window.location.href = `/?viewEntry=${targetEntryId}${workParam}`;
+    navigate(`/?viewEntry=${targetEntryId}${workParam}`);
     return;
   }
 
@@ -53,12 +60,12 @@ export function handleNotificationClick(
     case "deadline-today":
     case "deadline-tomorrow":
     case "overdue":
-      window.location.href = "/pending";
+      navigate("/pending");
       break;
 
     case "weekly-summary":
     default:
-      window.location.href = "/";
+      navigate("/");
       break;
   }
 }

@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { format } from "date-fns";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { useEntryStore } from "@/store/entryStore";
 import { Entry } from "@/types/entry";

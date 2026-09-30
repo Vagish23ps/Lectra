@@ -45,37 +45,39 @@ export default function ReminderConfigModal({
 
   useEffect(() => {
     if (open) {
-      setTimeout(() => setError(""), 0);
-      if (initialReminder) {
-        setName(initialReminder.name || "");
-        setType(initialReminder.type || "one-time");
-        setTime(initialReminder.time || "09:00");
-        setDate(initialReminder.date || format(new Date(), "yyyy-MM-dd"));
-        if (initialReminder.recurrence) {
-          setFrequency(initialReminder.recurrence.frequency || "daily");
-          if (initialReminder.recurrence.daysOfWeek?.length) {
-            setWeeklyDay(initialReminder.recurrence.daysOfWeek[0]);
-            setSelectedDays(initialReminder.recurrence.daysOfWeek);
+      setTimeout(() => {
+        setError("");
+        if (initialReminder) {
+          setName(initialReminder.name || "");
+          setType(initialReminder.type || "one-time");
+          setTime(initialReminder.time || "09:00");
+          setDate(initialReminder.date || format(new Date(), "yyyy-MM-dd"));
+          if (initialReminder.recurrence) {
+            setFrequency(initialReminder.recurrence.frequency || "daily");
+            if (initialReminder.recurrence.daysOfWeek?.length) {
+              setWeeklyDay(initialReminder.recurrence.daysOfWeek[0]);
+              setSelectedDays(initialReminder.recurrence.daysOfWeek);
+            }
+            if (initialReminder.recurrence.dayOfMonth) {
+              setDayOfMonth(initialReminder.recurrence.dayOfMonth);
+            }
           }
-          if (initialReminder.recurrence.dayOfMonth) {
-            setDayOfMonth(initialReminder.recurrence.dayOfMonth);
-          }
-        }
-      } else {
-        // Default new reminder
-        const now = new Date();
-        const nextHour = new Date(now.getTime() + 60 * 60 * 1000);
-        const nextTimeStr = `${String(nextHour.getHours()).padStart(2, "0")}:00`;
+        } else {
+          // Default new reminder
+          const now = new Date();
+          const nextHour = new Date(now.getTime() + 60 * 60 * 1000);
+          const nextTimeStr = `${String(nextHour.getHours()).padStart(2, "0")}:00`;
 
-        setName("");
-        setType("one-time");
-        setTime(nextTimeStr);
-        setDate(format(now, "yyyy-MM-dd"));
-        setFrequency("daily");
-        setWeeklyDay(1);
-        setSelectedDays([1, 3, 5]);
-        setDayOfMonth(1);
-      }
+          setName("");
+          setType("one-time");
+          setTime(nextTimeStr);
+          setDate(format(now, "yyyy-MM-dd"));
+          setFrequency("daily");
+          setWeeklyDay(1);
+          setSelectedDays([1, 3, 5]);
+          setDayOfMonth(1);
+        }
+      }, 0);
     }
   }, [open, initialReminder]);
 
@@ -116,6 +118,7 @@ export default function ReminderConfigModal({
   }), [name, type, time, date, frequency, weeklyDay, selectedDays, dayOfMonth, initialReminder]);
 
   const datePresets = useMemo(() => {
+    if (!open) return [];
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);

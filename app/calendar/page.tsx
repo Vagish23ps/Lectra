@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { format, isSameDay, addMonths, subMonths } from "date-fns";
+import { format, addMonths, subMonths } from "date-fns";
 import { ArrowLeft, CalendarDays, ClipboardList, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import { useEntryStore } from "@/store/entryStore";
 import EntryCard from "@/components/dashboard/EntryCard";
 import AddEntryDialog from "@/components/dialogs/AddEntryDialog";
 import { motion, AnimatePresence } from "framer-motion";
-import { pageVariants, itemVariants, listVariants } from "@/lib/animations";
+import { itemVariants, listVariants } from "@/lib/animations";
 
 export default function CalendarPage() {
   const router = useRouter();

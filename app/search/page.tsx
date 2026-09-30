@@ -12,7 +12,7 @@ import { useEntryStore } from "@/store/entryStore";
 import { useAllTags } from "@/store/tagStore";
 import EntryCard from "@/components/dashboard/EntryCard";
 import { motion, AnimatePresence } from "framer-motion";
-import { pageVariants, itemVariants, listVariants } from "@/lib/animations";
+import { itemVariants, listVariants } from "@/lib/animations";
 
 export default function SearchPage() {
   const router = useRouter();

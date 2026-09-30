@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import {
   X,
@@ -23,6 +23,27 @@ import {
 } from "@/src/lib/attachmentStorage";
 import { toast } from "sonner";
 
+interface PdfRenderTask {
+  promise: Promise<void>;
+  cancel: () => void;
+}
+
+interface PdfPage {
+  getViewport: (params: { scale: number }) => {
+    width: number;
+    height: number;
+  };
+  render: (params: {
+    canvasContext: CanvasRenderingContext2D;
+    viewport: object;
+  }) => PdfRenderTask;
+}
+
+interface PdfDocument {
+  numPages: number;
+  getPage: (pageNumber: number) => Promise<PdfPage>;
+}
+
 interface PdfViewerModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -30,49 +51,47 @@ interface PdfViewerModalProps {
   previewUrl?: string;
 }
 
+const emptySubscribe = () => () => {};
+
 export default function PdfViewerModal({
   open,
   onOpenChange,
   attachment,
   previewUrl,
 }: PdfViewerModalProps) {
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
   const [loading, setLoading] = useState(true);
   const [rendering, setRendering] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [pdfDoc, setPdfDoc] = useState<any>(null);
+  const [pdfDoc, setPdfDoc] = useState<PdfDocument | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [numPages, setNumPages] = useState<number>(0);
   const [zoomScale, setZoomScale] = useState<number>(1.2);
   const [activeBlob, setActiveBlob] = useState<Blob | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const renderTaskRef = useRef<any>(null);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const renderTaskRef = useRef<PdfRenderTask | null>(null);
 
   // Load PDF Document when Modal Opens
   useEffect(() => {
-    if (!open) {
-      setPdfDoc(null);
-      setCurrentPage(1);
-      setNumPages(0);
-      setActiveBlob(null);
-      setError(null);
-      return;
-    }
+    if (!open) return;
 
     let isCancelled = false;
 
     async function loadPdf() {
       setLoading(true);
       setError(null);
+      setPdfDoc(null);
+      setCurrentPage(1);
+      setNumPages(0);
+      setActiveBlob(null);
 
       try {
-        let blob: Blob | null = (attachment as any)?.file instanceof Blob ? (attachment as any).file : null;
+        let blob: Blob | null =
+          attachment && "file" in attachment && attachment.file instanceof Blob
+            ? (attachment.file as Blob)
+            : null;
         if (!blob && attachment?.id) {
           blob = await getAttachmentFile(attachment.id);
         }
@@ -110,10 +129,14 @@ export default function PdfViewerModal({
         setPdfDoc(doc);
         setNumPages(doc.numPages);
         setCurrentPage(1);
-      } catch (err: any) {
+      } catch (err) {
         console.error("PDF.js loading error:", err);
         if (!isCancelled) {
-          setError(err?.message || "Failed to parse and load PDF document.");
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Failed to parse and load PDF document."
+          );
         }
       } finally {
         if (!isCancelled) {
@@ -173,8 +196,10 @@ export default function PdfViewerModal({
 
       await renderTask.promise;
       ctx.restore();
-    } catch (err: any) {
-      if (err?.name !== "RenderingCancelledException") {
+    } catch (err) {
+      const isCancelledError =
+        err instanceof Error && err.name === "RenderingCancelledException";
+      if (!isCancelledError) {
         console.error("Canvas PDF render error:", err);
       }
     } finally {
@@ -187,6 +212,22 @@ export default function PdfViewerModal({
       void renderCurrentPage();
     }
   }, [pdfDoc, loading, currentPage, zoomScale, renderCurrentPage]);
+
+  const handleClose = () => {
+    if (renderTaskRef.current) {
+      try {
+        renderTaskRef.current.cancel();
+      } catch {
+        // Ignored
+      }
+    }
+    setPdfDoc(null);
+    setCurrentPage(1);
+    setNumPages(0);
+    setActiveBlob(null);
+    setError(null);
+    onOpenChange(false);
+  };
 
   if (!open || !mounted || typeof document === "undefined") return null;
   if (!attachment && !previewUrl) return null;
@@ -227,9 +268,10 @@ export default function PdfViewerModal({
 
       const res = await exportAttachmentFile(blob, fileName, "application/pdf");
       toast.success(`File saved\n${fileName}\nLocation: ${res.destination}`);
-    } catch (err: any) {
-      if (err?.message !== "Save cancelled by user.") {
-        toast.error(`Could not save file\n${err?.message || "Storage error"}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Storage error";
+      if (message !== "Save cancelled by user.") {
+        toast.error(`Could not save file\n${message}`);
       }
     }
   };
@@ -352,7 +394,7 @@ export default function PdfViewerModal({
             size="icon"
             data-slot="dialog-close"
             aria-label="Close"
-            onClick={() => onOpenChange(false)}
+            onClick={handleClose}
             className="h-8 w-8 rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground"
           >
             <X className="h-4 w-4" />

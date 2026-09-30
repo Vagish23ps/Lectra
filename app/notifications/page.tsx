@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
@@ -27,7 +27,12 @@ function NotificationsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [activeTab, setActiveTab] = useState<"notifications" | "reminders">("notifications");
+  const tabParam = searchParams.get("tab");
+  const activeTab: "notifications" | "reminders" =
+    tabParam === "reminders" || tabParam === "notifications"
+      ? tabParam
+      : "notifications";
+
   const [selectedReminderItem, setSelectedReminderItem] = useState<ActiveReminderItem | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [snoozeModalItem, setSnoozeModalItem] = useState<ActiveReminderItem | null>(null);
@@ -49,15 +54,7 @@ function NotificationsContent() {
 
   const updateReminder = useEntryStore((state) => state.updateReminder);
 
-  useEffect(() => {
-    const tab = searchParams.get("tab");
-    if (tab === "reminders" || tab === "notifications") {
-      setActiveTab(tab);
-    }
-  }, [searchParams]);
-
   const handleTabChange = (tab: "notifications" | "reminders") => {
-    setActiveTab(tab);
     router.replace(`/notifications?tab=${tab}`);
   };
 

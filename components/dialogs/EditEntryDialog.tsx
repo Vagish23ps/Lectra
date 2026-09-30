@@ -11,8 +11,6 @@ import {
   Tag,
   Trash2,
   Paperclip,
-  ImageIcon,
-  X,
   Camera,
 } from "lucide-react";
 
@@ -29,9 +27,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Entry, WorkItem, Attachment } from "@/types/entry";
 import { useEntryStore } from "@/store/entryStore";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { listVariants, itemVariants } from "@/lib/animations";
-import { saveAttachmentFile, deleteAttachmentFile, formatFileSize } from "@/src/lib/attachmentStorage";
+import { saveAttachmentFile, deleteAttachmentFile } from "@/src/lib/attachmentStorage";
 import TagSelector from "@/components/tags/TagSelector";
 import ReminderSection from "@/components/reminders/ReminderSection";
 import { CustomReminder } from "@/types/reminder";
@@ -39,7 +37,6 @@ import AttachmentThumbnail from "@/components/attachments/AttachmentThumbnail";
 import PdfAttachmentCard from "@/components/attachments/PdfAttachmentCard";
 import PhotoViewerModal from "@/components/attachments/PhotoViewerModal";
 import PdfViewerModal from "@/components/attachments/PdfViewerModal";
-import { formatAttachmentSummary } from "@/components/attachments/attachmentSummary";
 
 interface EditEntryDialogProps {
   open: boolean;
@@ -105,16 +102,18 @@ export default function EditEntryDialog({
 
   useEffect(() => {
     if (open) {
-      setEntryName(entry.entryName);
-      setSubject(entry.subject);
-      setLesson(entry.lesson);
-      setNotes(entry.notes);
-      setTags(entry.tags ? [...entry.tags] : []);
-      setReminder(entry.reminder ? { ...entry.reminder } : undefined);
-      setWorks(entry.works.map((work) => ({ ...work })));
-      setExistingAttachments(entry.attachments ? [...entry.attachments] : []);
-      setNewAttachments([]);
-      setDeletedAttachmentIds([]);
+      setTimeout(() => {
+        setEntryName(entry.entryName);
+        setSubject(entry.subject);
+        setLesson(entry.lesson);
+        setNotes(entry.notes);
+        setTags(entry.tags ? [...entry.tags] : []);
+        setReminder(entry.reminder ? { ...entry.reminder } : undefined);
+        setWorks(entry.works.map((work) => ({ ...work })));
+        setExistingAttachments(entry.attachments ? [...entry.attachments] : []);
+        setNewAttachments([]);
+        setDeletedAttachmentIds([]);
+      }, 0);
     }
   }, [entry, open]);
 
@@ -135,10 +134,10 @@ export default function EditEntryDialog({
     setWorks((prev) => prev.filter((work) => work.id !== id));
   };
 
-  const updateWork = (
+  const updateWork = <K extends keyof WorkItem>(
     id: string,
-    field: keyof WorkItem,
-    value: any,
+    field: K,
+    value: WorkItem[K],
   ) => {
     setWorks((prev) =>
       prev.map((work) =>

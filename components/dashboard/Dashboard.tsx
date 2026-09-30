@@ -1,7 +1,8 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, useSyncExternalStore } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 import { format } from "date-fns";
 import {
   CalendarDays,
@@ -29,11 +30,17 @@ import EntryCard from "./EntryCard";
 import NotificationBell from "@/components/notifications/NotificationBell";
 import { usePendingTasks } from "@/hooks/usePendingTasks";
 
-import { pageVariants, itemVariants, listVariants, cardVariants } from "@/lib/animations";
+import { cardVariants } from "@/lib/animations";
 
 function DashboardContent() {
-  const [currentDate, setCurrentDate] = useState<Date | null>(null);
-  const [viewingEntry, setViewingEntry] = useState<Entry | null>(null);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+  const currentDate = mounted ? new Date() : null;
+
+  const [viewingEntryId, setViewingEntryId] = useState<string | null>(null);
   const [editingEntry, setEditingEntry] = useState<Entry | null>(null);
   const [openViewDialog, setOpenViewDialog] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
@@ -45,9 +52,9 @@ function DashboardContent() {
   const entries = useEntryStore((state) => state.entries);
   const hasDraft = useDraftStore((state) => state.hasDraft);
 
-  useEffect(() => {
-    setCurrentDate(new Date());
-  }, []);
+  const viewingEntry = viewingEntryId
+    ? entries.find((e) => e.id === viewingEntryId) ?? null
+    : null;
 
   // Handle deep-linking to specific entry/task
   useEffect(() => {
@@ -57,24 +64,15 @@ function DashboardContent() {
     if (viewEntryId && entries.length > 0) {
       const target = entries.find((e) => e.id === viewEntryId);
       if (target) {
-        setViewingEntry(target);
-        setHighlightWorkId(workId || null);
-        setOpenViewDialog(true);
-        // Replace URL so refreshing or back navigation does not re-open the entry
         window.history.replaceState(null, "", "/");
+        setTimeout(() => {
+          setViewingEntryId(target.id);
+          setHighlightWorkId(workId || null);
+          setOpenViewDialog(true);
+        }, 0);
       }
     }
   }, [searchParams, entries]);
-
-  // Keep viewingEntry in sync with store changes
-  useEffect(() => {
-    if (viewingEntry) {
-      const updated = entries.find((e) => e.id === viewingEntry.id);
-      if (updated) {
-        setViewingEntry(updated);
-      }
-    }
-  }, [entries, viewingEntry]);
 
   const today = currentDate ? format(currentDate, "EEEE, dd MMMM yyyy") : "";
 
@@ -144,7 +142,7 @@ function DashboardContent() {
   const handleUpcomingItemClick = (item: UpcomingItem) => {
     const target = entries.find((e) => e.id === item.entryId);
     if (target) {
-      setViewingEntry(target);
+      setViewingEntryId(target.id);
       setHighlightWorkId(item.workId || null);
       setOpenViewDialog(true);
     }
@@ -157,9 +155,11 @@ function DashboardContent() {
         <header className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl shadow-md shadow-primary/20">
-              <img
+              <Image
                 src="/favicon.png"
                 alt="Lectra Logo"
+                width={44}
+                height={44}
                 className="h-full w-full object-cover"
               />
             </div>

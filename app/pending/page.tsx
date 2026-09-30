@@ -2,18 +2,12 @@
 
 import { Suspense, useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { format } from "date-fns";
 import {
   ArrowLeft,
   CalendarDays,
   CheckCircle2,
   Clock3,
-  AlertCircle,
-  Calendar,
-  Layers,
   ChevronRight,
-  Bell,
-  BookOpen,
   ListTodo,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,8 +18,7 @@ import { Entry } from "@/types/entry";
 import ViewEntryDialog from "@/components/dialogs/ViewEntryDialog";
 import EditEntryDialog from "@/components/dialogs/EditEntryDialog";
 import { motion, AnimatePresence } from "framer-motion";
-import { pageVariants, itemVariants, listVariants, tabContentVariants } from "@/lib/animations";
-import { toast } from "sonner";
+import { itemVariants, listVariants, tabContentVariants } from "@/lib/animations";
 
 type PendingWorkItem = {
   work: Entry["works"][number];
@@ -43,11 +36,15 @@ function PendingPageContent() {
   const entries = useEntryStore((state) => state.entries);
   const toggleWorkCompleted = useEntryStore((state) => state.toggleWorkCompleted);
 
-  const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
+  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
+  const selectedEntry = selectedEntryId
+    ? entries.find((e) => e.id === selectedEntryId) ?? null
+    : null;
   const [openView, setOpenView] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
+  const tabParam = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState<"important" | "other">(
-    "important",
+    tabParam === "other" ? "other" : "important",
   );
 
   const overdueRef = useRef<HTMLDivElement>(null);
@@ -78,23 +75,13 @@ function PendingPageContent() {
     remainingCount;
 
   useEffect(() => {
-    if (selectedEntry) {
-      const updated = entries.find((e) => e.id === selectedEntry.id);
-      if (updated) {
-        setSelectedEntry(updated);
-      }
-    }
-  }, [entries, selectedEntry]);
-
-  useEffect(() => {
     const tab = searchParams.get("tab");
     const section = searchParams.get("section");
 
-    if (tab === "important" || tab === "other") {
-      setActiveTab(tab);
-    }
-
     const timer = window.setTimeout(() => {
+      if (tab === "important" || tab === "other") {
+        setActiveTab(tab);
+      }
       switch (section) {
         case "overdue":
           overdueRef.current?.scrollIntoView({
@@ -652,7 +639,7 @@ function PendingPageContent() {
           entry={selectedEntry}
           onEdit={(entry: Entry) => {
             setOpenView(false);
-            setSelectedEntry(entry);
+            setSelectedEntryId(entry.id);
             setOpenEdit(true);
           }}
         />

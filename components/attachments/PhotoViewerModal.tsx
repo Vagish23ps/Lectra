@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { X, Download, Loader2, AlertCircle, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,25 +21,28 @@ export default function PhotoViewerModal({
   attachment,
   previewUrl,
 }: PhotoViewerModalProps) {
-  const [mounted, setMounted] = useState(false);
-  const [objectUrl, setObjectUrl] = useState<string | null>(previewUrl || null);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+  const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(!previewUrl);
   const [error, setError] = useState<string | null>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(1);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const displayUrl = previewUrl || objectUrl;
+  const isLoading = previewUrl ? false : loading;
+
+  const handleClose = () => {
+    setZoomLevel(1);
+    onOpenChange(false);
+  };
 
   useEffect(() => {
-    if (!open) {
-      setZoomLevel(1);
-      return;
-    }
+    if (!open) return;
 
     if (previewUrl) {
-      setObjectUrl(previewUrl);
-      setLoading(false);
       return;
     }
 
@@ -57,7 +60,10 @@ export default function PhotoViewerModal({
       setError(null);
 
       try {
-        let blob: Blob | null = (attachment as any)?.file instanceof Blob ? (attachment as any).file : null;
+        let blob: Blob | null =
+          attachment && "file" in attachment && attachment.file instanceof Blob
+            ? (attachment.file as Blob)
+            : null;
         if (!blob && attachment?.id) {
           blob = await getAttachmentFile(attachment.id);
         }
@@ -119,9 +125,10 @@ export default function PhotoViewerModal({
         attachment?.mimeType || "image/jpeg"
       );
       toast.success(`File saved\n${fileName}\nLocation: ${res.destination}`);
-    } catch (err: any) {
-      if (err?.message !== "Save cancelled by user.") {
-        toast.error(`Could not save file\n${err?.message || "Storage error"}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Storage error";
+      if (message !== "Save cancelled by user.") {
+        toast.error(`Could not save file\n${message}`);
       }
     }
   };
@@ -160,7 +167,7 @@ export default function PhotoViewerModal({
 
         <div className="flex items-center gap-2">
           {/* Zoom Controls */}
-          {objectUrl && (
+          {displayUrl && (
             <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-white/10 p-0.5">
               <Button
                 type="button"
@@ -199,7 +206,7 @@ export default function PhotoViewerModal({
             </div>
           )}
 
-          {objectUrl && (
+          {displayUrl && (
             <Button
               type="button"
               variant="ghost"
@@ -218,7 +225,7 @@ export default function PhotoViewerModal({
             size="icon"
             data-slot="dialog-close"
             aria-label="Close"
-            onClick={() => onOpenChange(false)}
+            onClick={handleClose}
             className="h-8 w-8 rounded-full border border-white/10 bg-white/10 text-white hover:bg-white/20"
           >
             <X className="h-4 w-4" />
@@ -228,7 +235,7 @@ export default function PhotoViewerModal({
 
       {/* Fullscreen Photo Container */}
       <div className="relative flex flex-1 items-center justify-center overflow-auto p-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)]">
-        {loading ? (
+        {isLoading ? (
           <div className="flex flex-col items-center gap-2 text-white/70">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <p className="text-sm">Loading photo...</p>
@@ -238,11 +245,11 @@ export default function PhotoViewerModal({
             <AlertCircle className="h-8 w-8" />
             <p className="text-sm">{error}</p>
           </div>
-        ) : objectUrl ? (
+        ) : displayUrl ? (
           <div className="flex h-full w-full items-center justify-center overflow-auto">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={objectUrl}
+              src={displayUrl}
               alt={fileName}
               style={{ transform: `scale(${zoomLevel})` }}
               className="max-h-full max-w-full rounded-xl object-contain shadow-2xl transition-transform duration-150 select-none"

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useEntryStore } from "@/store/entryStore";
+import { useNotificationSettingsStore } from "@/store/notificationSettingsStore";
 import { notificationService } from "./service";
 import { createNotificationChannels } from "./channel";
 import { initializeCapacitorNotificationActions } from "./capacitor";
@@ -9,6 +10,7 @@ import { initializeCapacitorNotificationActions } from "./capacitor";
 export default function NotificationProvider() {
   const entries = useEntryStore((state) => state.entries);
   const hydrated = useEntryStore((state) => state.hydrated);
+  const settings = useNotificationSettingsStore();
   const isInitialized = useRef(false);
 
   useEffect(() => {
@@ -26,7 +28,7 @@ export default function NotificationProvider() {
     }
 
     void setupNotifications();
-  }, [hydrated, entries]);
+  }, [hydrated, entries, settings]);
 
   return null;
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, Trash2, FileText, Image as ImageIcon } from "lucide-react";
-import { getAttachmentFile, formatFileSize } from "@/src/lib/attachmentStorage";
+import { getAttachmentFile } from "@/src/lib/attachmentStorage";
 
 interface AttachmentPreviewModalProps {
   open: boolean;
@@ -39,23 +40,28 @@ export default function AttachmentPreviewModal({
   const isPdf = attachment?.type?.includes("pdf") || attachment?.name?.endsWith(".pdf") || false;
 
   useEffect(() => {
+    let currentUrl: string | null = null;
+    let isCancelled = false;
+
     if (open && attachment && isImage) {
-      // Load thumbnail from IndexedDB
-      getAttachmentFile(attachment.id).then((blob) => {
-        if (blob) {
-          const url = URL.createObjectURL(blob);
-          setPreviewUrl(url);
-        }
-      }).catch(() => {});
+      getAttachmentFile(attachment.id)
+        .then((blob) => {
+          if (!isCancelled && blob) {
+            currentUrl = URL.createObjectURL(blob);
+            setPreviewUrl(currentUrl);
+          }
+        })
+        .catch(() => {});
     }
 
     return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-        setPreviewUrl(null);
+      isCancelled = true;
+      if (currentUrl) {
+        URL.revokeObjectURL(currentUrl);
       }
+      setPreviewUrl(null);
     };
-  }, [open, attachment?.id]);
+  }, [open, attachment, isImage]);
 
   if (!attachment) return null;
 
@@ -72,10 +78,13 @@ export default function AttachmentPreviewModal({
           {/* Preview */}
           {isImage && previewUrl ? (
             <div className="flex justify-center rounded-2xl bg-secondary/30 p-2">
-              <img
+              <Image
                 src={previewUrl}
                 alt={attachment.name}
-                className="max-h-64 rounded-xl object-contain"
+                width={400}
+                height={300}
+                unoptimized
+                className="max-h-64 w-auto rounded-xl object-contain"
               />
             </div>
           ) : isPdf ? (
