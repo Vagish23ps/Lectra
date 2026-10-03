@@ -5,16 +5,23 @@ import {
   PendingLocalNotificationSchema,
 } from "@capacitor/local-notifications";
 import { LectraNotification } from "./notificationTypes";
-import { handleNotificationClick } from "./actions";
+import { handleNotificationActionRouting } from "./actions";
 import { getNotificationNativeId } from "./ids";
 import { recordNotificationToHistory } from "./history";
+import { saveNotificationRegistry, findNotificationMetadata } from "./registry";
 import { useNotificationStore } from "@/store/notificationStore";
 import { useEntryStore } from "@/store/entryStore";
+import {
+  useNotificationSettingsStore,
+  NotificationSettings,
+} from "@/store/notificationSettingsStore";
 import { Entry } from "@/types/entry";
+import { CustomReminder } from "@/types/reminder";
+import { format } from "date-fns";
 
 export interface RecurringNotificationSettings {
-  weeklySummaryTime: string;   // "HH:MM"
-  weeklySummaryDay: string;    // JS convention: "0"=Sun … "6"=Sat
+  weeklySummaryTime: string; // "HH:MM"
+  weeklySummaryDay: string; // JS convention: "0"=Sun … "6"=Sat
 }
 
 export async function registerCapacitorActionTypes() {
@@ -29,8 +36,21 @@ export async function registerCapacitorActionTypes() {
               title: "Complete",
             },
             {
-              id: "view",
-              title: "View",
+              id: "remind",
+              title: "Remind me",
+            },
+          ],
+        },
+        {
+          id: "REMINDER_ACTIONS",
+          actions: [
+            {
+              id: "remind",
+              title: "Remind me",
+            },
+            {
+              id: "stop",
+              title: "Stop",
             },
           ],
         },
@@ -50,6 +70,12 @@ export async function scheduleCapacitorNotification(
     notification.type === "deadline-tomorrow" ||
     notification.type === "overdue";
 
+  const actionTypeId = isTaskNotification
+    ? "TASK_ACTIONS"
+    : notification.type === "custom-reminder"
+      ? "REMINDER_ACTIONS"
+      : undefined;
+
   await LocalNotifications.schedule({
     notifications: [
       {
@@ -57,12 +83,19 @@ export async function scheduleCapacitorNotification(
         title: notification.title,
         body: notification.body,
         channelId: "lectra-general",
-        actionTypeId: isTaskNotification ? "TASK_ACTIONS" : undefined,
+        actionTypeId,
         schedule: {
           at: new Date(notification.scheduledAt),
           allowWhileIdle: true,
         },
-        extra: notification,
+        extra: {
+          ...notification,
+          notificationId: notification.id,
+          entryId: notification.entryId,
+          workId: notification.workId,
+          reminderId: notification.customReminder?.id,
+          notificationCategory: isTaskNotification ? "task" : "active-reminder",
+        },
       },
     ],
   });
@@ -85,30 +118,6 @@ export async function cancelCapacitorNotifications(nativeIds: number[]) {
     notifications: nativeIds.map((id) => ({
       id,
     })),
-  });
-}
-
-export async function scheduleRepeatingCapacitorNotification(
-  notification: LectraNotification,
-  nativeId: number,
-  every: "day" | "week",
-) {
-  await LocalNotifications.schedule({
-    notifications: [
-      {
-        id: nativeId,
-        title: notification.title,
-        body: notification.body,
-        channelId: "lectra-general",
-        schedule: {
-          at: new Date(notification.scheduledAt),
-          repeats: true,
-          every,
-          allowWhileIdle: true,
-        },
-        extra: notification,
-      },
-    ],
   });
 }
 
@@ -161,8 +170,14 @@ export function buildCapacitorNotificationSchema(
     notification.type === "deadline-tomorrow" ||
     notification.type === "overdue";
 
-  let actionTypeId: string | undefined = isTaskNotification ? "TASK_ACTIONS" : undefined;
-  const channelId = "lectra-general";
+  let actionTypeId: string | undefined = isTaskNotification
+    ? "TASK_ACTIONS"
+    : undefined;
+  const channelId = isTaskNotification
+    ? "lectra-deadlines"
+    : notification.type === "custom-reminder"
+      ? "lectra-reminders"
+      : "lectra-general";
   let schedule: LocalNotificationSchema["schedule"] = {
     at: new Date(notification.scheduledAt),
     allowWhileIdle: true,
@@ -182,15 +197,20 @@ export function buildCapacitorNotificationSchema(
         hour,
         minute,
       },
-      // Weekly summary is a broad non-urgent check-in: use standard scheduling without forcing Doze wake lock
       allowWhileIdle: false,
     };
   } else if (notification.type === "custom-reminder") {
+    actionTypeId = "REMINDER_ACTIONS";
     const reminder = notification.customReminder;
-    const isTask = !!notification.workId;
-    actionTypeId = isTask ? "TASK_ACTIONS" : undefined;
+    const isSnoozedOccurrence = notification.id.includes("-snoozed-");
 
-    if (reminder?.type === "recurring") {
+    if (isSnoozedOccurrence) {
+      // Snoozed occurrence: ALWAYS schedule as an exact one-time alarm at scheduledAt
+      schedule = {
+        at: new Date(notification.scheduledAt),
+        allowWhileIdle: true,
+      };
+    } else if (reminder?.type === "recurring") {
       const frequency = reminder.recurrence?.frequency || "daily";
 
       if (frequency === "daily") {
@@ -253,6 +273,12 @@ export function buildCapacitorNotificationSchema(
     schedule,
     extra: {
       ...notification,
+      notificationId: notification.id,
+      entryId: notification.entryId,
+      workId: notification.workId,
+      reminderId: notification.customReminder?.id,
+      notificationCategory: isTaskNotification ? "task" : "active-reminder",
+      isSnoozed: notification.id.includes("-snoozed-"),
       _fingerprint: fingerprint,
     },
   };
@@ -269,7 +295,6 @@ function isPendingNotificationIdentical(
     return desiredFingerprint === pendingFingerprint;
   }
 
-  // Fallback field-by-field comparison for notifications scheduled without _fingerprint
   if (pending.id !== desired.id) return false;
   if (pending.title !== desired.title) return false;
   if (pending.body !== desired.body) return false;
@@ -291,7 +316,6 @@ function isPendingNotificationIdentical(
           ? pendingSchedule.at.getTime()
           : new Date(pendingSchedule.at).getTime();
 
-      // Allow 1 second tolerance for round-trip Date serialization
       if (Math.abs(desiredAt - pendingAt) > 1000) return false;
       if (!!desiredSchedule.repeats !== !!pendingSchedule.repeats) return false;
       if (desiredSchedule.every !== pendingSchedule.every) return false;
@@ -307,22 +331,247 @@ function isPendingNotificationIdentical(
 
   const pendingExtra = pending.extra as LectraNotification | undefined;
   const desiredExtra = desired.extra as LectraNotification | undefined;
-  if (pendingExtra?.id !== desiredExtra?.id) return false;
-  if (pendingExtra?.type !== desiredExtra?.type) return false;
-  if (pendingExtra?.workId !== desiredExtra?.workId) return false;
-  if (pendingExtra?.entryId !== desiredExtra?.entryId) return false;
+  if (pendingExtra && desiredExtra) {
+    if (pendingExtra.id !== desiredExtra.id) return false;
+    if (pendingExtra.type !== desiredExtra.type) return false;
+    if (pendingExtra.workId !== desiredExtra.workId) return false;
+    if (pendingExtra.entryId !== desiredExtra.entryId) return false;
+  }
 
   return true;
+}
+
+function isPendingOneTimeNotificationStillValid(
+  pendingId: number,
+  pending: PendingLocalNotificationSchema,
+  entries: Entry[],
+  settings: NotificationSettings,
+): boolean {
+  if (!settings.enabled) {
+    return false;
+  }
+
+  const extra = pending.extra as Record<string, unknown> | undefined;
+  const registryMeta = findNotificationMetadata(pendingId, pending.title, pending.body);
+
+  const stringId = String(extra?.notificationId ?? extra?.id ?? registryMeta?.id ?? "");
+  const type = String(extra?.type ?? registryMeta?.type ?? "");
+  const entryId = (extra?.entryId ?? registryMeta?.entryId) as string | undefined;
+  const workId = (extra?.workId ?? registryMeta?.workId) as string | undefined;
+  const reminderId = (extra?.reminderId ?? (extra?.customReminder as CustomReminder | undefined)?.id ?? registryMeta?.reminderId) as string | undefined;
+
+  const isSnoozed = stringId.includes("-snoozed-") || Boolean(extra?.isSnoozed);
+  const isTaskDeadline =
+    type === "deadline-today" ||
+    type === "deadline-tomorrow" ||
+    type === "overdue" ||
+    stringId.startsWith("deadline-today-") ||
+    stringId.startsWith("deadline-tomorrow-") ||
+    stringId.startsWith("overdue-");
+
+  const isOneTimeCustom =
+    (type === "custom-reminder" &&
+      !stringId.includes("-daily-") &&
+      !stringId.includes("-weekly-") &&
+      !stringId.includes("-day-") &&
+      !stringId.includes("-monthly-")) ||
+    isSnoozed;
+
+  const isOneTime =
+    isTaskDeadline ||
+    isOneTimeCustom ||
+    (Boolean(pending.schedule?.at) &&
+      !pending.schedule?.repeats &&
+      !pending.schedule?.on &&
+      !pending.schedule?.every);
+
+  // Recurring notifications never disappear from desiredIds merely due to time passage.
+  // Their absence from desiredIds means they were genuinely deleted, disabled, or completed.
+  if (!isOneTime) {
+    return false;
+  }
+
+  // Resolve scheduled timestamp if available
+  let scheduledTimestamp: number | undefined;
+  if (typeof extra?.scheduledAt === "number") {
+    scheduledTimestamp = extra.scheduledAt;
+  } else if (pending.schedule?.at) {
+    scheduledTimestamp =
+      pending.schedule.at instanceof Date
+        ? pending.schedule.at.getTime()
+        : new Date(pending.schedule.at).getTime();
+  }
+
+  // 1. Task Deadline Notifications
+  if (isTaskDeadline) {
+    if (
+      (type === "deadline-today" || stringId.startsWith("deadline-today-")) &&
+      !(settings.dueTodayReminder ?? settings.dueTodayEnabled ?? true)
+    ) {
+      return false;
+    }
+    if (
+      (type === "deadline-tomorrow" || stringId.startsWith("deadline-tomorrow-")) &&
+      !(settings.dueTomorrowReminder ?? settings.dueTomorrowEnabled ?? true)
+    ) {
+      return false;
+    }
+    if (
+      (type === "overdue" || stringId.startsWith("overdue-")) &&
+      !(settings.overdueReminder ?? settings.overdueEnabled ?? true)
+    ) {
+      return false;
+    }
+
+    const effectiveWorkId =
+      workId ||
+      stringId
+        .replace(/^(overdue|deadline-today|deadline-tomorrow)-/, "")
+        .split("-")[0];
+
+    if (!effectiveWorkId) return false;
+
+    let targetEntry: Entry | undefined = entryId
+      ? entries.find((e) => e.id === entryId)
+      : undefined;
+    let targetWork = targetEntry?.works.find((w) => w.id === effectiveWorkId);
+
+    if (!targetWork) {
+      for (const e of entries) {
+        const found = e.works.find((w) => w.id === effectiveWorkId);
+        if (found) {
+          targetEntry = e;
+          targetWork = found;
+          break;
+        }
+      }
+    }
+
+    if (!targetEntry || !targetWork) return false;
+    if (targetWork.completed) return false;
+    if (!targetWork.addToPending) return false;
+    if (!targetWork.deadline) return false;
+
+    // Check if the deadline date was modified by user
+    if (scheduledTimestamp && !isNaN(scheduledTimestamp)) {
+      const scheduledDateStr = format(new Date(scheduledTimestamp), "yyyy-MM-dd");
+      if (type === "deadline-today" || stringId.startsWith("deadline-today-")) {
+        if (targetWork.deadline !== scheduledDateStr) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
+  // 2. Custom Reminders (Task or Entry, including snoozed)
+  const isCustomRemindersEnabled =
+    settings.customReminders ?? settings.customRemindersEnabled ?? true;
+  if (!isCustomRemindersEnabled) return false;
+
+  const isTaskReminder =
+    Boolean(workId) ||
+    stringId.startsWith("custom-task-") ||
+    stringId.startsWith("custom-task");
+
+  if (isTaskReminder) {
+    const effectiveWorkId =
+      workId ||
+      stringId
+        .replace(/^custom-task-(snoozed-)?/, "")
+        .split("-")[0];
+
+    if (!effectiveWorkId) return false;
+
+    let targetEntry: Entry | undefined = entryId
+      ? entries.find((e) => e.id === entryId)
+      : undefined;
+    let targetWork = targetEntry?.works.find((w) => w.id === effectiveWorkId);
+
+    if (!targetWork) {
+      for (const e of entries) {
+        const found = e.works.find((w) => w.id === effectiveWorkId);
+        if (found) {
+          targetEntry = e;
+          targetWork = found;
+          break;
+        }
+      }
+    }
+
+    if (!targetEntry || !targetWork) return false;
+    if (targetWork.completed) return false;
+    if (!targetWork.reminder || targetWork.reminder.enabled === false) return false;
+    if (reminderId && targetWork.reminder.id !== reminderId) return false;
+
+    if (isSnoozed) {
+      if (!targetWork.reminder.snoozedUntil) return false;
+      if (scheduledTimestamp && !isNaN(scheduledTimestamp)) {
+        const currentSnoozeTime = new Date(targetWork.reminder.snoozedUntil).getTime();
+        if (Math.abs(currentSnoozeTime - scheduledTimestamp) > 1000) {
+          return false;
+        }
+      }
+    } else if (targetWork.reminder.type === "one-time") {
+      if (!targetWork.reminder.date) return false;
+      if (scheduledTimestamp && !isNaN(scheduledTimestamp)) {
+        const scheduledDateStr = format(new Date(scheduledTimestamp), "yyyy-MM-dd");
+        if (targetWork.reminder.date !== scheduledDateStr) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  } else {
+    // Entry-level reminder
+    const effectiveEntryId =
+      entryId ||
+      stringId
+        .replace(/^custom-entry-(snoozed-)?/, "")
+        .split("-")[0];
+
+    if (!effectiveEntryId) return false;
+
+    const targetEntry = entries.find((e) => e.id === effectiveEntryId);
+    if (!targetEntry) return false;
+    if (!targetEntry.reminder || targetEntry.reminder.enabled === false) return false;
+    if (reminderId && targetEntry.reminder.id !== reminderId) return false;
+
+    if (isSnoozed) {
+      if (!targetEntry.reminder.snoozedUntil) return false;
+      if (scheduledTimestamp && !isNaN(scheduledTimestamp)) {
+        const currentSnoozeTime = new Date(targetEntry.reminder.snoozedUntil).getTime();
+        if (Math.abs(currentSnoozeTime - scheduledTimestamp) > 1000) {
+          return false;
+        }
+      }
+    } else if (targetEntry.reminder.type === "one-time") {
+      if (!targetEntry.reminder.date) return false;
+      if (scheduledTimestamp && !isNaN(scheduledTimestamp)) {
+        const scheduledDateStr = format(new Date(scheduledTimestamp), "yyyy-MM-dd");
+        if (targetEntry.reminder.date !== scheduledDateStr) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
 }
 
 export async function reconcileCapacitorNotifications(
   notifications: LectraNotification[],
   settings: RecurringNotificationSettings,
+  entries?: Entry[],
 ) {
+  // Always update our persistent registry of scheduled notifications
+  saveNotificationRegistry(notifications);
+
   const pendingResult = await LocalNotifications.getPending();
   const pendingList = pendingResult.notifications || [];
 
-  // Map existing pending notifications by native id
   const pendingMap = new Map<number, PendingLocalNotificationSchema>();
   for (const pending of pendingList) {
     if (typeof pending.id === "number") {
@@ -330,7 +579,6 @@ export async function reconcileCapacitorNotifications(
     }
   }
 
-  // Build desired notifications with deterministic fingerprints
   const desiredSchemas = notifications.map((notification) =>
     buildCapacitorNotificationSchema(notification, settings),
   );
@@ -344,28 +592,41 @@ export async function reconcileCapacitorNotifications(
     const existing = pendingMap.get(desired.id);
 
     if (!existing) {
-      // Genuinely new notification -> schedule
       toSchedule.push(desired);
     } else {
-      // Notification exists with same native id -> check if schedule or content changed
       const isIdentical = isPendingNotificationIdentical(existing, desired);
       if (!isIdentical) {
         toCancelIds.push(desired.id);
         toSchedule.push(desired);
       }
-      // If identical, leave untouched in AlarmManager!
     }
   }
 
-  // Cancel any stale pending notifications that are no longer part of desired set
-  for (const [pendingId, pending] of pendingMap.entries()) {
-    const extra = pending.extra as LectraNotification | undefined;
-    if (extra?.id && !desiredIds.has(pendingId)) {
+  const fullSettings = useNotificationSettingsStore.getState();
+  const currentEntries =
+    entries && entries.length > 0 ? entries : useEntryStore.getState().entries;
+
+  for (const pendingId of pendingMap.keys()) {
+    if (!desiredIds.has(pendingId)) {
+      const pending = pendingMap.get(pendingId);
+      if (
+        pending &&
+        isPendingOneTimeNotificationStillValid(
+          pendingId,
+          pending,
+          currentEntries,
+          fullSettings,
+        )
+      ) {
+        // Pending one-time notification has merely reached/passed its scheduledAt time,
+        // but its underlying task/reminder is still valid and not completed/deleted/disabled.
+        // DO NOT cancel it, and DO NOT remove it from delivered notifications.
+        continue;
+      }
       toCancelIds.push(pendingId);
     }
   }
 
-  // 1. Batch cancel stale / changed notifications in one bridge call
   if (toCancelIds.length > 0) {
     await cancelCapacitorNotifications(toCancelIds);
     await LocalNotifications.removeDeliveredNotifications({
@@ -373,7 +634,6 @@ export async function reconcileCapacitorNotifications(
     }).catch(() => {});
   }
 
-  // 2. Batch schedule new / changed notifications in one bridge call
   if (toSchedule.length > 0) {
     await LocalNotifications.schedule({
       notifications: toSchedule,
@@ -381,43 +641,12 @@ export async function reconcileCapacitorNotifications(
   }
 }
 
-export async function handleCompleteNotificationAction(notification: LectraNotification) {
-  const { entries, updateEntry } = useEntryStore.getState();
-  const rawWorkId =
-    notification.workId ||
-    notification.id.replace(/^(overdue|deadline-today|deadline-tomorrow|custom-task|custom-task-daily|custom-task-weekly|custom-task-day|custom-task-monthly)-/, "").split("-")[0];
-
-  for (const entry of entries) {
-    const work = entry.works.find((w) => w.id === rawWorkId);
-    if (work) {
-      const updatedEntry: Entry = {
-        ...entry,
-        works: entry.works.map((w) =>
-          w.id === rawWorkId ? { ...w, completed: true } : w,
-        ),
-      };
-      updateEntry(updatedEntry);
-      break;
-    }
-  }
-
-  // Remove delivered notification from Android status bar / tray immediately
-  const nativeId = getNotificationNativeId(notification.id);
-  await LocalNotifications.removeDeliveredNotifications({
-    notifications: [{ id: nativeId, title: "", body: "" }],
-  }).catch(() => {});
-
-  // Mark read in notification history store
-  useNotificationStore.getState().markAsRead(notification.id);
-}
-
 let isSyncingHistory = false;
 let lastSyncTimestamp = 0;
 
 export async function syncDeliveredNotificationsToHistory() {
   const now = Date.now();
-  // Throttle duplicate calls within 1500ms and prevent concurrent sync executions
-  if (isSyncingHistory || now - lastSyncTimestamp < 1500) {
+  if (isSyncingHistory || now - lastSyncTimestamp < 1000) {
     return;
   }
 
@@ -425,6 +654,12 @@ export async function syncDeliveredNotificationsToHistory() {
   lastSyncTimestamp = now;
 
   try {
+    // Ensure the notification store is hydrated from persistent storage before syncing
+    const store = useNotificationStore.getState();
+    if (!store.hydrated) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+
     const delivered = await LocalNotifications.getDeliveredNotifications();
     if (delivered?.notifications?.length) {
       for (const notif of delivered.notifications) {
@@ -448,33 +683,47 @@ export async function initializeCapacitorNotificationActions() {
 
   await registerCapacitorActionTypes();
 
+  type NotificationPayload = {
+    id: number;
+    title?: string;
+    body?: string;
+    extra?: unknown;
+  };
+
+  const onActionPerformed = async (event: { actionId: string; notification: NotificationPayload }) => {
+    // Record to history as delivered and read
+    recordNotificationToHistory(event.notification, true);
+
+    // Route the action (complete / remind / stop / tap)
+    await handleNotificationActionRouting(event.actionId, event.notification);
+  };
+
+  const onNotificationReceived = (notification: NotificationPayload) => {
+    recordNotificationToHistory(notification);
+  };
+
   await LocalNotifications.addListener(
     "localNotificationActionPerformed",
-    (event) => {
-      const extra = event.notification.extra as LectraNotification | undefined;
-      recordNotificationToHistory(event.notification, true);
-
-      if (event.actionId === "complete" && extra) {
-        void handleCompleteNotificationAction(extra);
-      } else {
-        if (extra) {
-          handleNotificationClick(extra);
-        }
-      }
-    },
+    onActionPerformed,
   );
 
   await LocalNotifications.addListener(
     "localNotificationReceived",
-    (notification) => {
-      recordNotificationToHistory(notification);
-    },
+    onNotificationReceived,
   );
+
+  if (typeof window !== "undefined") {
+    (window as unknown as { __LECTRA_ACTIONS_DISPATCH__?: unknown }).__LECTRA_ACTIONS_DISPATCH__ = {
+      onActionPerformed,
+      onNotificationReceived,
+      syncDeliveredNotificationsToHistory,
+    };
+  }
 
   // Sync delivered notifications on startup
   await syncDeliveredNotificationsToHistory();
 
-  // Re-sync when app returns to foreground (throttled guard prevents duplicate concurrent executions)
+  // Re-sync when app returns to foreground
   if (typeof document !== "undefined") {
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") {

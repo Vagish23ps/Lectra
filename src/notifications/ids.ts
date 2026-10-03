@@ -8,5 +8,6 @@ export function getNotificationNativeId(
     hash |= 0;
   }
 
-  return Math.abs(hash);
+  const abs = Math.abs(hash);
+  return abs === 2147483648 ? 2147483647 : abs;
 }

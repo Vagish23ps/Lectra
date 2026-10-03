@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, Suspense } from "react";
+import { useState, useRef, Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
@@ -51,6 +51,34 @@ function NotificationsContent() {
     allReminders,
     totalActiveCount,
   } = useActiveReminders();
+
+  useEffect(() => {
+    const snoozeReminderId = searchParams.get("snoozeReminderId");
+    const entryId = searchParams.get("entryId");
+    const workId = searchParams.get("workId");
+
+    if (snoozeReminderId || entryId) {
+      const match = allReminders.find((item) => {
+        if (snoozeReminderId && item.reminder.id === snoozeReminderId) return true;
+        if (entryId && item.entryId === entryId) {
+          if (workId) return item.workId === workId;
+          return !item.workId;
+        }
+        return false;
+      });
+
+      if (match) {
+        if (typeof window !== "undefined") {
+          window.history.replaceState(null, "", "/notifications?tab=reminders");
+        }
+        const timer = setTimeout(() => {
+          setSnoozeModalItem(match);
+          setSnoozeModalOpen(true);
+        }, 0);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [searchParams, allReminders]);
 
   const updateReminder = useEntryStore((state) => state.updateReminder);
 

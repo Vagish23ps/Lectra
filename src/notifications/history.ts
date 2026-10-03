@@ -1,8 +1,40 @@
 import { NotificationItem, useNotificationStore } from "@/store/notificationStore";
 import { NotificationType, LectraNotification } from "./notificationTypes";
+import { findNotificationMetadata } from "./registry";
+import { format } from "date-fns";
 
 export function addHistory(notification: NotificationItem) {
   useNotificationStore.getState().addNotification(notification);
+}
+
+function inferTypeFromTitle(title: string, fallbackType?: unknown): NotificationType {
+  if (typeof fallbackType === "string" && isValidNotificationType(fallbackType)) {
+    return fallbackType as NotificationType;
+  }
+  if (title.includes("Overdue")) {
+    return "overdue";
+  }
+  if (title.includes("Due Today")) {
+    return "deadline-today";
+  }
+  if (title.includes("Due Tomorrow")) {
+    return "deadline-tomorrow";
+  }
+  if (title.includes("Weekly")) {
+    return "weekly-summary";
+  }
+  return "custom-reminder";
+}
+
+function isValidNotificationType(type: string): boolean {
+  return [
+    "daily-reminder",
+    "deadline-today",
+    "deadline-tomorrow",
+    "overdue",
+    "weekly-summary",
+    "custom-reminder",
+  ].includes(type);
 }
 
 export function recordNotificationToHistory(payload: unknown, read = false) {
@@ -14,57 +46,66 @@ export function recordNotificationToHistory(payload: unknown, read = false) {
     | LectraNotification
     | undefined;
 
-  const title = String(extra?.title ?? p["title"] ?? "Notification");
-  const body = String(extra?.body ?? p["body"] ?? "");
+  const rawTitle = String(extra?.title ?? p["title"] ?? "Notification");
+  const rawBody = String(extra?.body ?? p["body"] ?? "");
+  const nativeId = typeof p["id"] === "number" ? (p["id"] as number) : undefined;
 
-  let type: NotificationType = "custom-reminder";
-  if (extra?.type) {
-    type = extra.type;
-  } else if (p["type"]) {
-    type = p["type"] as NotificationType;
-  } else if (title.includes("Overdue")) {
-    type = "overdue";
-  } else if (title.includes("Due Today")) {
-    type = "deadline-today";
-  } else if (title.includes("Due Tomorrow")) {
-    type = "deadline-tomorrow";
-  } else if (title.includes("Weekly")) {
-    type = "weekly-summary";
-  } else if (title.includes("Reminder")) {
-    type = "custom-reminder";
+  let baseId = extra?.id;
+  let type = extra?.type;
+  let entryId = extra?.entryId;
+  let workId = extra?.workId;
+  let isRecurring =
+    baseId?.includes("-snoozed-")
+      ? false
+      : (extra?.customReminder?.type === "recurring" || type === "weekly-summary");
+
+  // If extra is missing (e.g. from Android getDeliveredNotifications()), lookup metadata
+  if (!baseId) {
+    const meta = findNotificationMetadata(nativeId, rawTitle, rawBody);
+    if (meta) {
+      baseId = meta.id;
+      type = meta.type;
+      entryId = meta.entryId;
+      workId = meta.workId;
+      isRecurring = baseId.includes("-snoozed-") ? false : (meta.isRecurring || meta.type === "weekly-summary");
+    }
   }
 
-  const isRecurring =
-    extra?.customReminder?.type === "recurring" ||
-    type === "weekly-summary";
-
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const baseId = String(extra?.id ?? p["id"] ?? `notif-${Date.now()}`);
-  const id = isRecurring && !baseId.includes(todayStr)
-    ? `${baseId}-${todayStr}`
-    : baseId;
-
-  let createdAt: string;
-  if (extra?.createdAt) {
-    createdAt = typeof extra.createdAt === "number"
-      ? new Date(extra.createdAt).toISOString()
-      : String(extra.createdAt);
-  } else if (p["createdAt"]) {
-    createdAt = typeof p["createdAt"] === "number"
-      ? new Date(p["createdAt"]).toISOString()
-      : String(p["createdAt"]);
-  } else {
-    createdAt = new Date().toISOString();
+  if (!baseId) {
+    baseId = typeof p["id"] === "string" ? (p["id"] as string) : `notif-${nativeId ?? Date.now()}`;
   }
+
+  if (!type) {
+    type = inferTypeFromTitle(rawTitle, p["type"]);
+  }
+
+  if (baseId.includes("-snoozed-")) {
+    isRecurring = false;
+  }
+
+  const todayStr = format(new Date(), "yyyy-MM-dd");
+  const isRecurringOrDaily =
+    isRecurring ||
+    type === "weekly-summary" ||
+    type === "overdue" ||
+    type === "daily-reminder";
+
+  const historyId =
+    isRecurringOrDaily && !baseId.includes(todayStr)
+      ? `${baseId}-${todayStr}`
+      : baseId;
+
+  // History conceptually represents: "Notification received at [date/time]"
+  const createdAt = new Date().toISOString();
 
   addHistory({
-    id,
+    id: historyId,
     type,
-    title,
-    body,
+    title: rawTitle,
+    body: rawBody,
     createdAt,
     read,
-    entryId: extra?.entryId,
-    workId: extra?.workId,
+    entryId,
+    workId,
   });
 }

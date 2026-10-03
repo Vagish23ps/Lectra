@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Entry, Attachment } from "@/types/entry";
+import { Entry, Attachment, WorkItem } from "@/types/entry";
 import { useEntryStore } from "@/store/entryStore";
 import { useAllTags } from "@/store/tagStore";
 import { motion } from "framer-motion";
@@ -36,6 +36,7 @@ import AttachmentThumbnail from "@/components/attachments/AttachmentThumbnail";
 import PdfAttachmentCard from "@/components/attachments/PdfAttachmentCard";
 import PhotoViewerModal from "@/components/attachments/PhotoViewerModal";
 import PdfViewerModal from "@/components/attachments/PdfViewerModal";
+import ReminderConfigModal from "@/components/reminders/ReminderConfigModal";
 import { toast } from "sonner";
 
 interface ViewEntryDialogProps {
@@ -43,6 +44,7 @@ interface ViewEntryDialogProps {
   onOpenChange: (open: boolean) => void;
   entry: Entry | null;
   highlightWorkId?: string | null;
+  openReminderWorkId?: string | null;
   onEdit?: (entry: Entry) => void;
 }
 
@@ -51,6 +53,7 @@ export default function ViewEntryDialog({
   onOpenChange,
   entry,
   highlightWorkId,
+  openReminderWorkId,
   onEdit,
 }: ViewEntryDialogProps) {
   const updateEntry = useEntryStore((state) => state.updateEntry);
@@ -62,7 +65,23 @@ export default function ViewEntryDialog({
   const highlightedTaskRef = useRef<HTMLDivElement>(null);
   const [activeHighlightId, setActiveHighlightId] = useState<string | null>(null);
   const [inlineTaskText, setInlineTaskText] = useState("");
+  const [reminderConfigWork, setReminderConfigWork] = useState<WorkItem | null>(null);
+  const [reminderModalOpen, setReminderModalOpen] = useState(false);
   const addInlineWork = useEntryStore((state) => state.addInlineWork);
+  const updateReminder = useEntryStore((state) => state.updateReminder);
+
+  useEffect(() => {
+    if (open && openReminderWorkId && entry) {
+      const targetWork = entry.works.find((w) => w.id === openReminderWorkId);
+      if (targetWork) {
+        const timer = setTimeout(() => {
+          setReminderConfigWork(targetWork);
+          setReminderModalOpen(true);
+        }, 0);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [open, openReminderWorkId, entry]);
 
   const handleAddInlineTask = () => {
     if (!entry || !inlineTaskText.trim()) return;
@@ -378,11 +397,30 @@ export default function ViewEntryDialog({
                               </div>
 
                               {/* Task Custom Reminder */}
-                              {work.reminder && (
-                                <div className="flex items-center gap-1.5 text-xs font-medium text-primary">
+                              {work.reminder ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setReminderConfigWork(work);
+                                    setReminderModalOpen(true);
+                                  }}
+                                  className="flex items-center gap-1.5 text-xs font-medium text-primary hover:underline text-left cursor-pointer"
+                                >
                                   <Bell className="h-3.5 w-3.5 shrink-0" />
                                   <span className="truncate">{formatReminderSummary(work.reminder)}</span>
-                                </div>
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setReminderConfigWork(work);
+                                    setReminderModalOpen(true);
+                                  }}
+                                  className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                                >
+                                  <Bell className="h-3 w-3 shrink-0" />
+                                  <span>Set reminder</span>
+                                </button>
                               )}
 
                               {/* Deadline */}
@@ -630,6 +668,25 @@ export default function ViewEntryDialog({
         open={!!selectedPdf}
         onOpenChange={(v) => !v && setSelectedPdf(null)}
         attachment={selectedPdf}
+      />
+
+      {/* Reminder Config Modal */}
+      <ReminderConfigModal
+        open={reminderModalOpen}
+        onOpenChange={(v) => {
+          setReminderModalOpen(v);
+          if (!v) {
+            setReminderConfigWork(null);
+          }
+        }}
+        initialReminder={reminderConfigWork?.reminder}
+        onSave={(reminder) => {
+          if (entry && reminderConfigWork) {
+            updateReminder(entry.id, reminderConfigWork.id, reminder);
+            toast.success("Reminder updated");
+          }
+        }}
+        title={reminderConfigWork ? `Reminder: ${reminderConfigWork.task}` : "Set Reminder"}
       />
     </>
   );

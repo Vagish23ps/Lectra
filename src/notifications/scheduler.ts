@@ -12,7 +12,7 @@ export async function runNotificationScheduler(entries: Entry[]) {
     if (typeof window !== "undefined") {
       const { Capacitor } = await import("@capacitor/core");
       if (Capacitor.isNativePlatform()) {
-        await reconcileCapacitorNotifications([], settings);
+        await reconcileCapacitorNotifications([], settings, entries);
       }
     }
     return;
@@ -26,7 +26,7 @@ export async function runNotificationScheduler(entries: Entry[]) {
     const { Capacitor } = await import("@capacitor/core");
 
     if (Capacitor.isNativePlatform()) {
-      await reconcileCapacitorNotifications(notifications, settings);
+      await reconcileCapacitorNotifications(notifications, settings, entries);
       // DO NOT record future scheduled notifications to history here.
       // History is only recorded when the notification actually triggers and is delivered.
       return;

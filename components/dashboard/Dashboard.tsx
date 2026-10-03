@@ -46,6 +46,7 @@ function DashboardContent() {
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [openAddEntry, setOpenAddEntry] = useState(false);
   const [highlightWorkId, setHighlightWorkId] = useState<string | null>(null);
+  const [openReminderWorkId, setOpenReminderWorkId] = useState<string | null>(null);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -60,6 +61,7 @@ function DashboardContent() {
   useEffect(() => {
     const viewEntryId = searchParams.get("viewEntry");
     const workId = searchParams.get("workId");
+    const openReminder = searchParams.get("openReminder") === "true";
 
     if (viewEntryId && entries.length > 0) {
       const target = entries.find((e) => e.id === viewEntryId);
@@ -68,6 +70,7 @@ function DashboardContent() {
         setTimeout(() => {
           setViewingEntryId(target.id);
           setHighlightWorkId(workId || null);
+          setOpenReminderWorkId(openReminder && workId ? workId : null);
           setOpenViewDialog(true);
         }, 0);
       }
@@ -380,9 +383,13 @@ function DashboardContent() {
         {/* Deep-Linked View and Edit Dialogs */}
         <ViewEntryDialog
           open={openViewDialog}
-          onOpenChange={setOpenViewDialog}
+          onOpenChange={(v) => {
+            setOpenViewDialog(v);
+            if (!v) setOpenReminderWorkId(null);
+          }}
           entry={viewingEntry}
           highlightWorkId={highlightWorkId}
+          openReminderWorkId={openReminderWorkId}
           onEdit={handleOpenEditFromView}
         />
 

@@ -203,6 +203,7 @@ export default function NotificationCard({
       };
       updateEntry(updatedEntry);
       markAsRead(notification.id);
+      useNotificationStore.getState().setActionTaken(notification.id, "completed");
 
       if (typeof window !== "undefined") {
         try {
@@ -302,6 +303,12 @@ export default function NotificationCard({
                 </span>
               )}
             </>
+          )}
+
+          {notification.actionTaken === "stopped" && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <span>Stopped</span>
+            </span>
           )}
 
           {targetEntryId && (
