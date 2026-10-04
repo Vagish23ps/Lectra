@@ -44,19 +44,23 @@ Whether capturing everyday thoughts, managing project tasks, scheduling one-time
 
 | Dashboard | Add Entry |
 | :---: | :---: |
-| ![Lectra Dashboard](Screenshots/dashboard.png) | ![Add Entry Dialog](Screenshots/add-entry.png) |
+| ![Lectra Dashboard](Screenshots/Dashboard.png) | ![Add Entry Dialog](Screenshots/Add_Entry.png) |
 
 | Entry Details | Pending Tasks |
 | :---: | :---: |
-| ![View Entry Dialog](Screenshots/view-entry.png) | ![Pending Tasks](Screenshots/important-tasks.png) |
+| ![View Entry Dialog](Screenshots/Entry_Details.png) | ![Pending Tasks](Screenshots/Pending_List.png) |
 
 | Notification Center | Calendar View |
 | :---: | :---: |
-| ![Notification Center](Screenshots/notifications.png) | ![Calendar](Screenshots/calendar-ui.png) |
+| ![Notification Center](Screenshots/Notification_Panel.png) | ![Calendar](Screenshots/Calendar.png) |
 
-| Real-Time Search |
-| :---: |
-| ![Search Screen](Screenshots/search.png) |
+| Real-Time Search | Reminders |
+| :---: | :---: |
+| ![Search Screen](Screenshots/Search.png) | ![Reminders](Screenshots/Reminder.png) |
+
+| Android Notification | Storage |
+| :---: | :---: |
+| ![Android Notification](Screenshots/Notification.png) | ![Storage](Screenshots/Storage.png) |
 
 ## Notification System
 
@@ -210,4 +214,4 @@ Lectra is in a **stable pre-release state** with all core features, storage subs
 
 ## License
 
-All rights reserved by the author unless explicitly stated otherwise.
+All rights reserved.
