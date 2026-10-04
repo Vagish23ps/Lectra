@@ -108,7 +108,7 @@ Lectra features a native notification subsystem designed for reliability on Andr
 
 ### Prerequisites
 
-- Node.js 18.x or 20.x
+- Node.js 20.x or newer
 - npm (bundled with Node.js)
 
 ### Installation
