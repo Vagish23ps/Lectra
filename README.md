@@ -52,7 +52,7 @@ Whether capturing everyday thoughts, managing project tasks, scheduling one-time
 
 | Notification Center | Calendar View |
 | :---: | :---: |
-| ![Notification Center](Screenshots/Notification_Panel.jpg) | ![Calendar](Screenshots/Calendar.jpg) |
+| ![Notification Center](Screenshots/notification_Panel.jpg) | ![Calendar](Screenshots/Calendar.jpg) |
 
 | Real-Time Search | Reminders |
 | :---: | :---: |
