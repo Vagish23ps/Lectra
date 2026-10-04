@@ -44,23 +44,23 @@ Whether capturing everyday thoughts, managing project tasks, scheduling one-time
 
 | Dashboard | Add Entry |
 | :---: | :---: |
-| ![Lectra Dashboard](Screenshots/Dashboard.png) | ![Add Entry Dialog](Screenshots/Add_Entry.png) |
+| ![Lectra Dashboard](Screenshots/Dashboard.jpg) | ![Add Entry Dialog](Screenshots/Add_Entry.png) |
 
 | Entry Details | Pending Tasks |
 | :---: | :---: |
-| ![View Entry Dialog](Screenshots/Entry_Details.png) | ![Pending Tasks](Screenshots/Pending_List.png) |
+| ![View Entry Dialog](Screenshots/Entry_Details.jpg) | ![Pending Tasks](Screenshots/Pending_List.jpg) |
 
 | Notification Center | Calendar View |
 | :---: | :---: |
-| ![Notification Center](Screenshots/Notification_Panel.png) | ![Calendar](Screenshots/Calendar.png) |
+| ![Notification Center](Screenshots/Notification_Panel.jpg) | ![Calendar](Screenshots/Calendar.jpg) |
 
 | Real-Time Search | Reminders |
 | :---: | :---: |
-| ![Search Screen](Screenshots/Search.png) | ![Reminders](Screenshots/Reminder.png) |
+| ![Search Screen](Screenshots/Search.jpg) | ![Reminders](Screenshots/Reminder.jpg) |
 
 | Android Notification | Storage |
 | :---: | :---: |
-| ![Android Notification](Screenshots/Notification.png) | ![Storage](Screenshots/Storage.png) |
+| ![Android Notification](Screenshots/Notification.jpg) | ![Storage](Screenshots/Storage.jpg) |
 
 ## Notification System
 
