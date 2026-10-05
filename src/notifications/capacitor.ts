@@ -18,6 +18,7 @@ import {
 import { Entry } from "@/types/entry";
 import { CustomReminder } from "@/types/reminder";
 import { format } from "date-fns";
+import { createScheduledDate } from "./engine";
 
 export interface RecurringNotificationSettings {
   weeklySummaryTime: string; // "HH:MM"
@@ -136,7 +137,7 @@ export function computeNotificationFingerprint(
           : new Date(schedule.at).getTime();
       scheduleKey = `at:${atTime}:rep:${!!schedule.repeats}:ev:${schedule.every || ""}:idle:${!!schedule.allowWhileIdle}`;
     } else if (schedule.on) {
-      scheduleKey = `on:wd:${schedule.on.weekday ?? ""}:h:${schedule.on.hour ?? ""}:m:${schedule.on.minute ?? ""}:idle:${!!schedule.allowWhileIdle}`;
+      scheduleKey = `on:wd:${schedule.on.weekday ?? ""}:h:${schedule.on.hour ?? ""}:m:${schedule.on.minute ?? ""}:s:${schedule.on.second ?? ""}:idle:${!!schedule.allowWhileIdle}`;
     } else if (schedule.every) {
       scheduleKey = `ev:${schedule.every}:idle:${!!schedule.allowWhileIdle}`;
     }
@@ -222,6 +223,7 @@ export function buildCapacitorNotificationSchema(
           on: {
             hour,
             minute,
+            second: 0,
           },
           allowWhileIdle: true,
         };
@@ -237,6 +239,7 @@ export function buildCapacitorNotificationSchema(
             weekday: capacitorWeekday,
             hour,
             minute,
+            second: 0,
           },
           allowWhileIdle: true,
         };
@@ -321,9 +324,18 @@ function isPendingNotificationIdentical(
       if (desiredSchedule.every !== pendingSchedule.every) return false;
     } else if (desiredSchedule.on) {
       if (!pendingSchedule.on) return false;
-      if (desiredSchedule.on.weekday !== pendingSchedule.on.weekday) return false;
-      if (desiredSchedule.on.hour !== pendingSchedule.on.hour) return false;
-      if (desiredSchedule.on.minute !== pendingSchedule.on.minute) return false;
+      const dW = desiredSchedule.on.weekday ?? null;
+      const pW = pendingSchedule.on.weekday ?? null;
+      if (dW !== pW) return false;
+      const dH = desiredSchedule.on.hour ?? null;
+      const pH = pendingSchedule.on.hour ?? null;
+      if (dH !== pH) return false;
+      const dM = desiredSchedule.on.minute ?? null;
+      const pM = pendingSchedule.on.minute ?? null;
+      if (dM !== pM) return false;
+      const dS = desiredSchedule.on.second ?? null;
+      const pS = pendingSchedule.on.second ?? null;
+      if (dS !== pS) return false;
     } else if (desiredSchedule.every) {
       if (desiredSchedule.every !== pendingSchedule.every) return false;
     }
@@ -402,6 +414,16 @@ function isPendingOneTimeNotificationStillValid(
         : new Date(pending.schedule.at).getTime();
   }
 
+  // A one-time notification whose scheduled timestamp has already passed MUST NOT remain scheduled.
+  // If not fired yet, it is stale and must be cancelled rather than firing as a delayed alarm later.
+  if (
+    scheduledTimestamp !== undefined &&
+    !isNaN(scheduledTimestamp) &&
+    scheduledTimestamp <= Date.now()
+  ) {
+    return false;
+  }
+
   // 1. Task Deadline Notifications
   if (isTaskDeadline) {
     if (
@@ -452,11 +474,33 @@ function isPendingOneTimeNotificationStillValid(
     if (!targetWork.addToPending) return false;
     if (!targetWork.deadline) return false;
 
-    // Check if the deadline date was modified by user
+    // Check if the deadline date OR the configured alert time was modified
     if (scheduledTimestamp && !isNaN(scheduledTimestamp)) {
-      const scheduledDateStr = format(new Date(scheduledTimestamp), "yyyy-MM-dd");
       if (type === "deadline-today" || stringId.startsWith("deadline-today-")) {
-        if (targetWork.deadline !== scheduledDateStr) {
+        const expectedScheduledAt = createScheduledDate(
+          targetWork.deadline,
+          settings.dueTodayReminderTime || "08:00",
+          0
+        ).getTime();
+        if (Math.abs(expectedScheduledAt - scheduledTimestamp) > 1000) {
+          return false;
+        }
+      } else if (type === "deadline-tomorrow" || stringId.startsWith("deadline-tomorrow-")) {
+        const expectedScheduledAt = createScheduledDate(
+          targetWork.deadline,
+          settings.dueTomorrowReminderTime || "17:00",
+          -1
+        ).getTime();
+        if (Math.abs(expectedScheduledAt - scheduledTimestamp) > 1000) {
+          return false;
+        }
+      } else if (type === "overdue" || stringId.startsWith("overdue-")) {
+        const expectedScheduledAt = createScheduledDate(
+          targetWork.deadline,
+          settings.overdueReminderTime || "07:30",
+          1
+        ).getTime();
+        if (Math.abs(expectedScheduledAt - scheduledTimestamp) > 1000) {
           return false;
         }
       }
@@ -520,6 +564,12 @@ function isPendingOneTimeNotificationStillValid(
         if (targetWork.reminder.date !== scheduledDateStr) {
           return false;
         }
+        const [rHour, rMinute] = (targetWork.reminder.time || "09:00").split(":").map(Number);
+        const [year, month, day] = targetWork.reminder.date.split("-").map(Number);
+        const expectedScheduledAt = new Date(year, month - 1, day, rHour, rMinute, 0, 0).getTime();
+        if (Math.abs(expectedScheduledAt - scheduledTimestamp) > 1000) {
+          return false;
+        }
       }
     }
 
@@ -552,6 +602,12 @@ function isPendingOneTimeNotificationStillValid(
       if (scheduledTimestamp && !isNaN(scheduledTimestamp)) {
         const scheduledDateStr = format(new Date(scheduledTimestamp), "yyyy-MM-dd");
         if (targetEntry.reminder.date !== scheduledDateStr) {
+          return false;
+        }
+        const [rHour, rMinute] = (targetEntry.reminder.time || "09:00").split(":").map(Number);
+        const [year, month, day] = targetEntry.reminder.date.split("-").map(Number);
+        const expectedScheduledAt = new Date(year, month - 1, day, rHour, rMinute, 0, 0).getTime();
+        if (Math.abs(expectedScheduledAt - scheduledTimestamp) > 1000) {
           return false;
         }
       }
@@ -629,9 +685,6 @@ export async function reconcileCapacitorNotifications(
 
   if (toCancelIds.length > 0) {
     await cancelCapacitorNotifications(toCancelIds);
-    await LocalNotifications.removeDeliveredNotifications({
-      notifications: toCancelIds.map((id) => ({ id, title: "", body: "" })),
-    }).catch(() => {});
   }
 
   if (toSchedule.length > 0) {

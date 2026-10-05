@@ -10,7 +10,7 @@ function formatDeadline(dateString: string): string {
   return format(date, "d MMM yyyy");
 }
 
-function createScheduledDate(
+export function createScheduledDate(
   dateString: string,
   timeString: string,
   dayOffset: number
